@@ -1,12 +1,14 @@
 # Obowiązki — app (add-on) do Home Assistant
 
-Specyfikacja dla Claude Code. Wersja 0.4, stan na 2026-10-11.
+Specyfikacja dla Claude Code. Wersja 0.5, stan na 2026-10-11.
 
 Repozytorium: https://github.com/Fryk/house-chores-ha
 
 Oznaczenia wiarygodności faktów technicznych:
 - **[docs]** — sprawdzone 2026-10-11 w oficjalnej dokumentacji HA (linki na końcu)
 - **[trening]** — z wiedzy modelu, niezweryfikowane. Przed implementacją sprawdź w dokumentacji i popraw spec, jeśli się nie zgadza.
+
+W wersji 0.5 wszystkie punkty [trening] zostały sprawdzone w źródłach dokumentacji (pkt 12). Zostały tylko dwa, których dokumentacja HA nie opisuje: dostęp do prywatnego repo (pkt 9.1) i schowek w WebView (pkt 8.1); ścieżkę panelu dla `clickAction` trzeba odczytać w M0 (pkt 5).
 
 ---
 
@@ -79,7 +81,7 @@ Wymagany debounce (krótkie skoki stanu nie tworzą zadań) i automat stanów pe
 
 Koniec cyklu po 20:00: zadanie powstaje od razu i jest widoczne w appce, a pierwsze powiadomienie idzie o 10:00.
 
-Technicznie: subskrypcja zmian stanu przez WebSocket (`subscribe_events` na `state_changed` z filtrem po encjach albo `subscribe_trigger`) **[trening]**; lista encji do wyboru z `GET /api/states` **[trening]**.
+Technicznie: subskrypcja zmian stanu przez WebSocket **[docs]**. `subscribe_events` przyjmuje tylko opcjonalne `event_type`, **bez filtra po encjach** — przy `state_changed` appka dostaje zmiany wszystkich encji i sama filtruje po `entity_id`. Alternatywa: `subscribe_trigger` z triggerem `platform: state` i listą `entity_id` (składnia jak w automatyzacjach); serwer odsyła wtedy wiadomości typu `trigger`. Lista encji do wyboru z `GET /api/states` (tablica obiektów `entity_id`, `state`, `last_changed`, `attributes`) albo z komendy WS `get_states` **[docs]**.
 
 ## 3. Katalog obowiązków
 
@@ -105,7 +107,7 @@ Ekran ustawień pobiera dostępne usługi `notify.mobile_app_*` z HA i pozwala p
 
 ## 5. Powiadomienia
 
-Wysyłka: `POST http://supervisor/core/api/services/notify/<usługa>` z nagłówkiem `Authorization: Bearer $SUPERVISOR_TOKEN` **[docs: URL proxy i token; trening: dokładny kształt body REST]**.
+Wysyłka: `POST http://supervisor/core/api/services/notify/<usługa>` z nagłówkiem `Authorization: Bearer $SUPERVISOR_TOKEN` i `Content-Type: application/json` **[docs]**. Body to bezpośrednio `service_data` usługi (obiekt JSON poniżej, bez dodatkowego opakowania); odpowiedź to lista zmienionych stanów **[docs]**.
 
 Payload:
 ```json
@@ -125,13 +127,13 @@ Payload:
 Zasady:
 - Android pozwala na maks. **3 akcje** w powiadomieniu **[docs]**.
 - Identyfikator akcji zawiera id wystąpienia i id osoby (`_p2`), bo powiadomienia są wysyłane per osoba. Dzięki temu wiadomo, kto kliknął, bez polegania na `context.user_id`.
-- Stały `tag` per wystąpienie: ponowienie zastępuje poprzednie powiadomienie zamiast tworzyć kolejne **[trening]**.
-- Kasowanie po odhaczeniu: wiadomość `clear_notification` z tym samym `tag` do wszystkich odbiorców **[trening]**.
-- Tapnięcie w treść otwiera appkę: `clickAction` ze ścieżką panelu ingress **[trening — ustal aktualną ścieżkę panelu]**.
-- Dostarczanie na czas: `ttl: 0`, `priority: high`; osobny `channel` „Obowiązki", żeby dało się ustawić dźwięk w Androidzie **[trening]**.
+- Stały `tag` per wystąpienie: ponowienie zastępuje poprzednie powiadomienie zamiast tworzyć kolejne **[docs]**. Na Androidzie nie używać tego samego `tag` w różnych `group` **[docs]**.
+- Kasowanie po odhaczeniu: `message: "clear_notification"` i `data.tag` z tym samym tagiem, do wszystkich odbiorców **[docs]**. Zastrzeżenie z docs: na Androidzie dla powiadomień, które nie są krytyczne, skasowanie może wymagać, żeby aplikacja była niedawno używana — kasowanie jest „best effort”, a stan prawdy trzyma baza.
+- Tapnięcie w treść otwiera appkę: `data.clickAction` (Android; `url` dla iOS) przyjmuje względny URL instancji HA, np. `/lovelace/test` **[docs]**. Dokumentacja nie podaje ścieżki panelu ingress appki — w M0 odczytać ją z paska adresu po otwarciu panelu „Obowiązki” i zapisać w spec (slug zawiera prefiks repozytorium, patrz `/addons/self/info`, dostępne bez `hassio_api`) **[docs: względny URL; ścieżka panelu do ustalenia w M0]**.
+- Dostarczanie na czas: `ttl: 0`, `priority: high` w `data` — bez tego Android potrafi nie zadzwonić, gdy telefon leży z wygaszonym ekranem (nie dotyczy lokalnego push) **[docs]**. Osobny `channel` „Obowiązki": kanał tworzy się przy pierwszym powiadomieniu z daną nazwą, potem użytkownik ustawia jego dźwięk w Androidzie (domyślnie `General`) **[docs]**. Właściwości kanału (`importance`, `vibrationPattern`, `ledColor`) są ustawiane tylko przy pierwszym użyciu kanału, później ignorowane (poza obniżeniem `importance`) — dlatego `importance: high` trzeba wysłać od pierwszego powiadomienia **[docs]**.
 - Powiadomienia informacyjne („ktoś zrobił") idą bez przycisków, z osobnym tagiem, na osobnym kanale „Obowiązki – info".
 
-Odbiór kliknięć: WebSocket `ws://supervisor/core/websocket`, uwierzytelnienie tokenem `SUPERVISOR_TOKEN` **[docs]**, potem `subscribe_events` na `mobile_app_notification_action` **[trening: kształt wiadomości]**. Zdarzenie niesie `action` oraz, na Androidzie, pola wysłane w powiadomieniu, m.in. `tag` **[docs]**. Wymagany auto-reconnect z backoffem; po reconnect appka odczytuje aktualne stany obserwowanych encji, żeby nie zgubić końca cyklu.
+Odbiór kliknięć: WebSocket `ws://supervisor/core/websocket`, uwierzytelnienie tokenem `SUPERVISOR_TOKEN` **[docs]**. Przebieg **[docs]**: serwer wysyła `{"type":"auth_required"}`, appka odpowiada `{"type":"auth","access_token":"<SUPERVISOR_TOKEN>"}`, serwer `auth_ok` (albo `auth_invalid` i rozłącza). Potem `{"id":N,"type":"subscribe_events","event_type":"mobile_app_notification_action"}` → `result` z `success: true`, a każde kliknięcie przychodzi jako `{"id":N,"type":"event","event":{"event_type":...,"data":{"action":...,"tag":...},"context":{"user_id":...}}}`. Kolejne komendy muszą mieć rosnące `id`. Zdarzenie niesie `action` oraz, na Androidzie, pola wysłane w powiadomieniu, m.in. `tag` **[docs]**. Wymagany auto-reconnect z backoffem; po reconnect appka odczytuje aktualne stany obserwowanych encji, żeby nie zgubić końca cyklu.
 
 Akcje:
 - `DONE` → wystąpienie `done`, zapis kto/kiedy, kasowanie przypomnień, powiadomienie informacyjne (jeśli włączone dla zadania).
@@ -143,7 +145,7 @@ Akcje:
 - Tick co minutę. Decyzja „co wysłać" wynika wyłącznie ze stanu w bazie (wystąpienie + `last_notified_at` per osoba), więc restart niczego nie gubi i niczego nie dubluje.
 - Po przestoju: maks. jedno zaległe powiadomienie na wystąpienie, bez serii.
 - Generowanie wystąpień: `dated` na dany dzień o północy (lub przy starcie), `weekly` w poniedziałek 00:00.
-- Strefa czasowa z HA (`GET /api/config` → `time_zone`) **[trening]**. Obraz musi mieć dane stref (w Go: `import _ "time/tzdata"`).
+- Strefa czasowa z HA (`GET /api/config` → `time_zone`, np. `"Europe/Zurich"`; także komenda WS `get_config`) **[docs]**. Obraz musi mieć dane stref (w Go: `import _ "time/tzdata"`).
 - Okno powiadomień globalne: `reminders_start` 10:00, `reminders_end` 20:00.
 
 ## 7. Model danych (SQLite w `/data/chores.db`)
@@ -176,7 +178,7 @@ Uwagi:
 
 ## 8. UI
 
-Mobile-first, po polsku, otwierane w aplikacji HA przez ingress. Wszystkie URL-e względne; ścieżka bazowa z nagłówka `X-Ingress-Path` **[trening]**. Rozpoznanie zalogowanego użytkownika HA z nagłówków ingress (`X-Remote-User-Id` i pokrewne) **[trening — zweryfikuj; fallback: wybór osoby zapamiętany w `localStorage`]**.
+Mobile-first, po polsku, otwierane w aplikacji HA przez ingress. Wszystkie URL-e względne; ścieżka bazowa z nagłówka `X-Ingress-Path` **[docs]**. Ingress przenosi HTTP/1.x, streaming i WebSockety **[docs]**. Rozpoznanie zalogowanego użytkownika HA z nagłówków, które Supervisor dodaje do każdego żądania ingress: `X-Remote-User-Id`, `X-Remote-User-Name`, `X-Remote-User-Display-Name` **[docs]**. Fallback (brak nagłówka albo użytkownik niepowiązany z osobą): wybór osoby zapamiętany w `localStorage`.
 
 Ekrany:
 1. **Do zrobienia** — otwarte wystąpienia: dziś i zaległe, potem „w tym tygodniu". Duży przycisk „Zrobione" przy każdym. Sekcja „Nieprzypisane" z przyciskiem „To ja".
@@ -231,7 +233,7 @@ Reguły formatu podane w prompcie:
 - `reason`: jedno zdanie po polsku
 - `notes`: uwagi o brakujących lub zdublowanych zadaniach, wyłącznie informacyjne
 
-Wydanie tekstu: przycisk „Kopiuj" oraz „Pobierz .md". Schowek w WebView aplikacji HA bywa zablokowany **[trening]**, więc tekst jest też widoczny w polu tekstowym do ręcznego zaznaczenia.
+Wydanie tekstu: przycisk „Kopiuj" oraz „Pobierz .md". Schowek w WebView aplikacji HA bywa zablokowany **[trening — dokumentacja HA tego nie opisuje; sprawdzić na telefonie w M5]**, więc tekst jest też widoczny w polu tekstowym do ręcznego zaznaczenia.
 
 ### 8.2 Import wag
 
@@ -281,7 +283,7 @@ Dockerfile **[docs]**:
 - Multi-stage: `golang:alpine` (build) → `alpine` (runtime) z samą binarką.
 - Obsługiwane architektury to tylko `aarch64` i `amd64`.
 
-Bezpieczeństwo ingress: serwer nasłuchuje na 8099 i przyjmuje połączenia tylko z adresu bramy ingress `172.30.32.2` **[trening]**.
+Bezpieczeństwo ingress: serwer nasłuchuje na 8099 (domyślny port ingress; inny wymaga `ingress_port`) i przyjmuje połączenia tylko z adresu bramy ingress `172.30.32.2`, odrzucając wszystkie inne **[docs]**.
 
 ### 9.1 Repozytorium i instalacja
 
@@ -297,7 +299,9 @@ obowiazki/             # katalog appki (nazwa = slug)
 SPEC.md
 ```
 
-Instalacja: dodanie URL repozytorium w sklepie appek HA **[trening — sprawdź w docs/apps/repository]**. Uwaga: Supervisor nie zainstaluje appki z prywatnego repo bez dodatkowej konfiguracji **[trening]**; jeśli repo ma zostać prywatne, alternatywą jest skopiowanie katalogu `obowiazki/` do `/addons` na hoście HA jako lokalna appka **[trening]**.
+`repository.yaml` w katalogu głównym jest wymagany; klucz `name` obowiązkowy, `url` i `maintainer` opcjonalne **[docs]**.
+
+Instalacja: Ustawienia → Apps → „App store” (prawy dolny róg) → dodanie URL repozytorium w polu repozytoriów → Zapisz **[docs]**. Dokładne etykiety menu w aktualnym UI potwierdzić przy instalacji w M0. Uwaga: dokumentacja nie opisuje instalacji z prywatnego repo **[trening — przyjmujemy, że Supervisor go nie sklonuje bez dodatkowej konfiguracji]**. Jeśli repo ma zostać prywatne, alternatywą jest lokalna appka: skopiowanie katalogu `obowiazki/` do podkatalogu `/local_apps` na hoście HA (przez appkę Samba — udział `local_apps` — albo SSH), potem w sklepie ⋮ → „Check for updates” i appka pojawia się w sekcji „Local apps” **[docs]**. Dawna nazwa katalogu `/addons` nie jest już używana w docs.
 
 ### 9.2 Tryby uruchamiania
 
@@ -342,4 +346,13 @@ Testy jednostkowe z wstrzykiwanym zegarem: scheduler i powtarzalność (zmiana c
 - App configuration: https://developers.home-assistant.io/docs/apps/configuration
 - App communication: https://developers.home-assistant.io/docs/apps/communication
 - Actionable notifications: https://companion.home-assistant.io/docs/notifications/actionable-notifications
-- Do sprawdzenia w M0: https://companion.home-assistant.io/docs/notifications/notifications-basic (tag, clear_notification, clickAction, channel, ttl/priority), https://developers.home-assistant.io/docs/api/rest, https://developers.home-assistant.io/docs/api/websocket, https://developers.home-assistant.io/docs/apps/presentation (ingress)
+- Notifications basic (tag, clear_notification, clickAction, channel): https://companion.home-assistant.io/docs/notifications/notifications-basic
+- Critical notifications (ttl/priority na Androidzie): https://companion.home-assistant.io/docs/notifications/critical-notifications
+- REST API: https://developers.home-assistant.io/docs/api/rest
+- WebSocket API: https://developers.home-assistant.io/docs/api/websocket
+- App presentation (ingress, `X-Ingress-Path`, 172.30.32.2): https://developers.home-assistant.io/docs/apps/presentation
+- App security (nagłówki `X-Remote-User-*`): https://developers.home-assistant.io/docs/apps/security
+- App repository (`repository.yaml`, instalacja): https://developers.home-assistant.io/docs/apps/repository
+- Lokalne appki (`/local_apps`): https://developers.home-assistant.io/docs/apps/tutorial, https://developers.home-assistant.io/docs/apps/testing
+
+Weryfikacja 2026-10-11 była robiona na źródłach Markdown tych stron (repozytoria `home-assistant/developers.home-assistant` i `home-assistant/companion.home-assistant`, gałąź `master`), bo strony docs były niedostępne z sieci środowiska.
