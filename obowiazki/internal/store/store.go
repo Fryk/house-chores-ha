@@ -1,4 +1,4 @@
-// Package store trzyma stan appki w SQLite (DATA_DIR/chores.db) i stosuje migracje schematu.
+// Package store keeps the app state in SQLite (DATA_DIR/chores.db) and applies schema migrations.
 package store
 
 import (
@@ -36,7 +36,7 @@ func Open(dataDir string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Jeden zapisujący proces, mała baza: jedno połączenie upraszcza transakcje.
+	// Single writer, small database: one connection keeps transactions simple.
 	db.SetMaxOpenConns(1)
 	s := &Store{db: db, now: time.Now}
 	if err := s.migrate(context.Background()); err != nil {
@@ -48,7 +48,7 @@ func Open(dataDir string) (*Store, error) {
 
 func (s *Store) Close() error { return s.db.Close() }
 
-// SchemaVersion zwraca numer ostatniej zastosowanej migracji.
+// SchemaVersion returns the number of the last applied migration.
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
 	var v int
 	err := s.db.QueryRowContext(ctx, `SELECT COALESCE(MAX(version), 0) FROM schema_version`).Scan(&v)
@@ -73,7 +73,7 @@ func (s *Store) migrate(ctx context.Context) error {
 		num, _, _ := strings.Cut(filepath.Base(f), "_")
 		v, err := strconv.Atoi(num)
 		if err != nil {
-			return fmt.Errorf("migracja %s: zła nazwa pliku", f)
+			return fmt.Errorf("migration %s: bad file name", f)
 		}
 		if v <= current {
 			continue
@@ -88,7 +88,7 @@ func (s *Store) migrate(ctx context.Context) error {
 		}
 		if _, err := tx.ExecContext(ctx, string(body)); err != nil {
 			tx.Rollback()
-			return fmt.Errorf("migracja %s: %w", f, err)
+			return fmt.Errorf("migration %s: %w", f, err)
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_version(version, applied_at) VALUES (?, ?)`,
 			v, s.now().UTC().Format(time.RFC3339)); err != nil {
@@ -117,7 +117,7 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 	return err
 }
 
-// NextSeq atomowo zwiększa licznik trzymany w settings i zwraca nową wartość.
+// NextSeq atomically increments a counter kept in settings and returns the new value.
 func (s *Store) NextSeq(ctx context.Context, key string) (int64, error) {
 	var v int64
 	err := s.db.QueryRowContext(ctx,
@@ -150,7 +150,7 @@ func (s *Store) LogEvent(ctx context.Context, e Event) (int64, error) {
 	return res.LastInsertId()
 }
 
-// RecentEvents zwraca najnowsze zdarzenia, od najnowszego.
+// RecentEvents returns the latest events, newest first.
 func (s *Store) RecentEvents(ctx context.Context, limit int) ([]Event, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, at, kind, service, tag, action, detail FROM dev_event_log ORDER BY id DESC LIMIT ?`, limit)
@@ -171,7 +171,7 @@ func (s *Store) RecentEvents(ctx context.Context, limit int) ([]Event, error) {
 	return out, rows.Err()
 }
 
-// ServiceForTag zwraca usługę notify, na którą ostatnio wysłano powiadomienie z danym tagiem.
+// ServiceForTag returns the notify service that last received a notification with the given tag.
 func (s *Store) ServiceForTag(ctx context.Context, tag string) (string, bool, error) {
 	var svc string
 	err := s.db.QueryRowContext(ctx,

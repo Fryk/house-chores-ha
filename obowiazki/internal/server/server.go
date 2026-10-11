@@ -1,9 +1,11 @@
-// Package server to interfejs HTTP appki: strona główna (ingress), test powiadomień i strona /dev w trybie fake.
+// Package server is the app's HTTP interface: the home page (served through ingress),
+// the test notification and, in fake mode, the /dev page.
 package server
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -20,6 +22,7 @@ import (
 	"github.com/Fryk/house-chores-ha/obowiazki/internal/actions"
 	"github.com/Fryk/house-chores-ha/obowiazki/internal/config"
 	"github.com/Fryk/house-chores-ha/obowiazki/internal/ha"
+	"github.com/Fryk/house-chores-ha/obowiazki/internal/i18n"
 	"github.com/Fryk/house-chores-ha/obowiazki/internal/store"
 	"github.com/Fryk/house-chores-ha/obowiazki/web"
 )
@@ -27,14 +30,13 @@ import (
 const (
 	settingPanelPath   = "panel_path"
 	settingLastService = "test_service"
-	channelMain        = "Obowiązki"
 )
 
 type Server struct {
 	cfg    config.Config
 	store  *store.Store
 	client ha.Client
-	fake   *ha.Fake // nil w trybie supervisor
+	fake   *ha.Fake // nil in supervisor mode
 	log    *slog.Logger
 	now    func() time.Time
 	pages  map[string]*template.Template
@@ -75,7 +77,7 @@ func (s *Server) Handler() http.Handler {
 	return mux
 }
 
-// onlyFrom przepuszcza tylko połączenia z bramy ingress (wymóg z dokumentacji HA).
+// onlyFrom lets through only connections from the ingress gateway, as the Home Assistant docs require.
 func onlyFrom(ip string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -89,7 +91,7 @@ func onlyFrom(ip string, next http.Handler) http.Handler {
 
 var safePath = regexp.MustCompile(`^(/[A-Za-z0-9._~-]+)+$`)
 
-// basePath zwraca ścieżkę bazową z nagłówka X-Ingress-Path (bez końcowego "/"), a w trybie fake "".
+// basePath returns the base path from the X-Ingress-Path header (no trailing "/"), or "" in fake mode.
 func basePath(r *http.Request) string {
 	p := strings.TrimRight(r.Header.Get("X-Ingress-Path"), "/")
 	if !safePath.MatchString(p) {
@@ -108,7 +110,19 @@ func userFrom(r *http.Request) remoteUser {
 	}
 }
 
+// lang picks the language for the request and remembers an explicit ?lang= choice in a cookie.
+func lang(w http.ResponseWriter, r *http.Request) i18n.Lang {
+	l := i18n.FromRequest(r)
+	if _, ok := i18n.Parse(r.URL.Query().Get("lang")); ok {
+		http.SetCookie(w, &http.Cookie{Name: i18n.CookieName, Value: string(l), Path: basePath(r) + "/",
+			MaxAge: 365 * 24 * 3600, SameSite: http.SameSiteLaxMode, HttpOnly: true})
+	}
+	return l
+}
+
 type pageData struct {
+	L               i18n.Lang
+	OtherLang       i18n.Lang
 	Base, Mode, Msg string
 	MsgErr, Fake    bool
 	User            remoteUser
@@ -117,15 +131,22 @@ type pageData struct {
 	Services           []string
 	ServicesErr        string
 	Service, PanelPath string
+	DefaultPanelPath   string
 	Slug, IngressURL   string
 	SchemaVersion      int
 	Events             []store.Event
 	Sent               []ha.FakeNotification
 }
 
-func (s *Server) basePage(r *http.Request) pageData {
+func (s *Server) basePage(w http.ResponseWriter, r *http.Request) pageData {
 	q := r.URL.Query()
+	l := lang(w, r)
+	other := i18n.EN
+	if l == i18n.EN {
+		other = i18n.PL
+	}
 	return pageData{
+		L: l, OtherLang: other,
 		Base: basePath(r), Mode: string(s.cfg.Mode), Fake: s.fake != nil,
 		Msg: q.Get("msg"), MsgErr: q.Get("err") == "1",
 		User: userFrom(r), Now: s.now(),
@@ -158,26 +179,31 @@ func (s *Server) selfInfo(ctx context.Context) ha.SelfInfo {
 	s.selfOnce.Do(func() {
 		info, err := s.client.SelfInfo(ctx)
 		if err != nil {
-			s.log.Warn("nie udało się pobrać /addons/self/info", "err", err)
+			s.log.Warn("could not read /addons/self/info", "err", err)
 		}
 		s.self = info
 	})
 	return s.self
 }
 
-func (s *Server) panelPath(ctx context.Context) string {
-	if p, ok, _ := s.store.Setting(ctx, settingPanelPath); ok {
-		return p
-	}
+// defaultPanelPath is a guess ("/<slug>") until the real panel path is confirmed in M0.
+func (s *Server) defaultPanelPath(ctx context.Context) string {
 	if slug := s.selfInfo(ctx).Slug; slug != "" {
 		return "/" + slug
 	}
 	return ""
 }
 
+func (s *Server) panelPath(ctx context.Context) string {
+	if p, ok, _ := s.store.Setting(ctx, settingPanelPath); ok {
+		return p
+	}
+	return s.defaultPanelPath(ctx)
+}
+
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	d := s.basePage(r)
+	d := s.basePage(w, r)
 	var err error
 	if d.Services, err = s.client.NotifyServices(ctx); err != nil {
 		d.ServicesErr = err.Error()
@@ -187,6 +213,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		d.Service = d.Services[0]
 	}
 	d.PanelPath = s.panelPath(ctx)
+	d.DefaultPanelPath = s.defaultPanelPath(ctx)
 	info := s.selfInfo(ctx)
 	d.Slug, d.IngressURL = info.Slug, info.IngressURL
 	d.SchemaVersion, _ = s.store.SchemaVersion(ctx)
@@ -198,82 +225,83 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 var serviceName = regexp.MustCompile(`^mobile_app_[a-z0-9_]+$`)
 
-// TestNotification buduje testowe powiadomienie z dwiema akcjami, jak w pkt 5 specyfikacji.
-func TestNotification(seq int64, clickAction string) ha.Notification {
+// TestNotification builds a test notification with two actions, as described in section 5 of the spec.
+func TestNotification(l i18n.Lang, seq int64, clickAction string) ha.Notification {
 	data := map[string]any{
 		"tag": fmt.Sprintf("chores-test-%d", seq),
 		"actions": []map[string]string{
-			{"action": actions.Action{Kind: actions.Done, OccurrenceID: seq}.String(), "title": "Zrobione"},
-			{"action": actions.Action{Kind: actions.Snooze, OccurrenceID: seq}.String(), "title": "Za godzinę"},
+			{"action": actions.Action{Kind: actions.Done, OccurrenceID: seq}.String(), "title": l.T("notif.done")},
+			{"action": actions.Action{Kind: actions.Snooze, OccurrenceID: seq}.String(), "title": l.T("notif.snooze")},
 		},
 		"ttl":        0,
 		"priority":   "high",
-		"channel":    channelMain,
-		"importance": "high", // ustawiane tylko przy pierwszym użyciu kanału
+		"channel":    l.T("notif.channel"),
+		"importance": "high", // only applied the first time the channel is used
 	}
 	if clickAction != "" {
 		data["clickAction"] = clickAction // Android
 		data["url"] = clickAction         // iOS
 	}
-	return ha.Notification{Title: "Obowiązki", Message: fmt.Sprintf("Testowe powiadomienie #%d", seq), Data: data}
+	return ha.Notification{Title: l.T("notif.title"), Message: l.T("notif.test_message", seq), Data: data}
 }
 
 func (s *Server) handleTestNotify(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	l := lang(w, r)
 	service := strings.TrimPrefix(strings.TrimSpace(r.FormValue("service")), "notify.")
 	click := strings.TrimSpace(r.FormValue("click_action"))
 	if !serviceName.MatchString(service) {
-		s.redirect(w, r, "", "Podaj usługę w postaci mobile_app_…", true)
+		s.redirect(w, r, "", l.T("test.bad_service"), true)
 		return
 	}
 	s.store.SetSetting(ctx, settingLastService, service)
 	s.store.SetSetting(ctx, settingPanelPath, click)
 	seq, err := s.store.NextSeq(ctx, "test_seq")
 	if err != nil {
-		s.redirect(w, r, "", "Błąd bazy: "+err.Error(), true)
+		s.redirect(w, r, "", l.T("test.db_error", err), true)
 		return
 	}
-	n := TestNotification(seq, click)
+	n := TestNotification(l, seq, click)
 	tag := n.Data["tag"].(string)
 	payload, _ := json.Marshal(n)
 	if err := s.client.Notify(ctx, service, n); err != nil {
-		s.log.Error("wysyłka testowego powiadomienia", "service", service, "err", err)
+		s.log.Error("sending test notification", "service", service, "err", err)
 		s.store.LogEvent(ctx, store.Event{Kind: "error", Service: service, Tag: tag, Detail: err.Error()})
-		s.redirect(w, r, "", "Nie udało się wysłać: "+err.Error(), true)
+		s.redirect(w, r, "", l.T("test.send_failed", err), true)
 		return
 	}
-	s.log.Info("wysłano testowe powiadomienie", "service", service, "tag", tag)
+	s.log.Info("test notification sent", "service", service, "tag", tag)
 	s.store.LogEvent(ctx, store.Event{Kind: "notify", Service: service, Tag: tag, Detail: string(payload)})
-	s.redirect(w, r, "", fmt.Sprintf("Wysłano testowe powiadomienie #%d na notify.%s", seq, service), false)
+	s.redirect(w, r, "", l.T("test.sent", seq, service), false)
 }
 
-// HandleAction obsługuje kliknięcie przycisku w powiadomieniu (z HA albo ze strony /dev).
+// HandleAction handles a tap on a notification button (from Home Assistant or from the /dev page).
 func (s *Server) HandleAction(ev ha.ActionEvent) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	a, ok := actions.Parse(ev.Action)
 	if !ok {
-		s.log.Debug("pomijam obcą akcję", "action", ev.Action)
+		s.log.Debug("ignoring foreign action", "action", ev.Action)
 		return
 	}
-	s.log.Info("kliknięto akcję", "kind", a.Kind, "occurrence", a.OccurrenceID, "person", a.PersonID,
+	s.log.Info("action tapped", "kind", a.Kind, "occurrence", a.OccurrenceID, "person", a.PersonID,
 		"tag", ev.Tag, "ha_user_id", ev.UserID)
-	detail := fmt.Sprintf("%s, wystąpienie %d, osoba %d, użytkownik HA %q", a.Kind, a.OccurrenceID, a.PersonID, ev.UserID)
+	detail := fmt.Sprintf("%s occurrence=%d person=%d ha_user_id=%q", a.Kind, a.OccurrenceID, a.PersonID, ev.UserID)
 	if a.Kind == actions.Snooze {
-		detail += " — odkładanie przypomnień dojdzie w M2"
+		detail += " (snoozing arrives in M2)"
 	}
 	s.store.LogEvent(ctx, store.Event{Kind: "action", Tag: ev.Tag, Action: ev.Action, Detail: detail})
 
 	if a.Kind != actions.Done || ev.Tag == "" {
 		return
 	}
-	// Po „Zrobione” kasujemy powiadomienie z tym tagiem (sprawdzenie clear_notification).
+	// After "Done" remove the notification with this tag (exercises clear_notification).
 	service, ok, err := s.store.ServiceForTag(ctx, ev.Tag)
 	if err != nil || !ok {
 		return
 	}
 	if err := s.client.Notify(ctx, service, ha.Clear(ev.Tag)); err != nil {
-		s.log.Error("kasowanie powiadomienia", "service", service, "tag", ev.Tag, "err", err)
+		s.log.Error("clearing notification", "service", service, "tag", ev.Tag, "err", err)
 		s.store.LogEvent(ctx, store.Event{Kind: "error", Service: service, Tag: ev.Tag, Detail: err.Error()})
 		return
 	}
@@ -281,17 +309,31 @@ func (s *Server) HandleAction(ev ha.ActionEvent) {
 }
 
 func (s *Server) handleDev(w http.ResponseWriter, r *http.Request) {
-	d := s.basePage(r)
+	d := s.basePage(w, r)
 	d.Sent = s.fake.Sent()
 	s.render(w, "dev", d)
 }
 
+var clickErrors = map[error]string{
+	ha.ErrNoSuchNotification: "dev.err_missing",
+	ha.ErrNotificationGone:   "dev.err_gone",
+	ha.ErrNoSuchAction:       "dev.err_action",
+	ha.ErrNotRunning:         "dev.err_not_ready",
+}
+
 func (s *Server) handleDevClick(w http.ResponseWriter, r *http.Request) {
+	l := lang(w, r)
 	id, _ := strconv.Atoi(r.FormValue("id"))
 	action := r.FormValue("action")
 	if err := s.fake.Click(id, action); err != nil {
-		s.redirect(w, r, "dev", err.Error(), true)
+		msg := err.Error()
+		for e, key := range clickErrors {
+			if errors.Is(err, e) {
+				msg = l.T(key)
+			}
+		}
+		s.redirect(w, r, "dev", msg, true)
 		return
 	}
-	s.redirect(w, r, "dev", "Kliknięto "+action+" — szczegóły w logu i na stronie głównej", false)
+	s.redirect(w, r, "dev", l.T("dev.clicked", action), false)
 }

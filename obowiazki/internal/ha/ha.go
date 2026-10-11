@@ -1,5 +1,5 @@
-// Package ha to warstwa rozmowy z Home Assistantem. Logika appki widzi tylko interfejs Client,
-// który ma dwie implementacje: Supervisor (prawdziwy HA) i Fake (lokalnie, bez HA).
+// Package ha talks to Home Assistant. The app logic only sees the Client interface,
+// which has two implementations: Supervisor (real Home Assistant) and Fake (local, no Home Assistant).
 package ha
 
 import (
@@ -8,31 +8,31 @@ import (
 	"time"
 )
 
-// Notification to service_data usługi notify.mobile_app_*.
+// Notification is the service_data of a notify.mobile_app_* service call.
 type Notification struct {
 	Title   string         `json:"title,omitempty"`
 	Message string         `json:"message"`
 	Data    map[string]any `json:"data,omitempty"`
 }
 
-// ClearMessage to treść, która każe aplikacji Companion skasować powiadomienie o danym tagu.
+// ClearMessage tells the Companion app to remove the notification with the given tag.
 const ClearMessage = "clear_notification"
 
-// Clear buduje wiadomość kasującą powiadomienie o danym tagu.
+// Clear builds a message that removes the notification with the given tag.
 func Clear(tag string) Notification {
 	return Notification{Message: ClearMessage, Data: map[string]any{"tag": tag}}
 }
 
-// ActionEvent to dane zdarzenia mobile_app_notification_action.
+// ActionEvent is the data of a mobile_app_notification_action event.
 type ActionEvent struct {
 	Action string
-	Tag    string // Android odsyła wszystkie pola data z powiadomienia, w tym tag
-	UserID string // context.user_id, tylko informacyjnie
+	Tag    string // Android sends back every data field of the notification, including tag
+	UserID string // context.user_id, informational only
 	At     time.Time
 	Raw    json.RawMessage
 }
 
-// SelfInfo to wybrane pola z /addons/self/info.
+// SelfInfo holds selected fields of /addons/self/info.
 type SelfInfo struct {
 	Slug       string `json:"slug"`
 	IngressURL string `json:"ingress_url"`
@@ -40,9 +40,9 @@ type SelfInfo struct {
 
 type Client interface {
 	Notify(ctx context.Context, service string, n Notification) error
-	// NotifyServices zwraca nazwy usług notify.mobile_app_* (bez prefiksu domeny "notify.").
+	// NotifyServices returns notify.mobile_app_* service names (without the "notify." domain prefix).
 	NotifyServices(ctx context.Context) ([]string, error)
 	SelfInfo(ctx context.Context) (SelfInfo, error)
-	// Run odbiera kliknięcia akcji i wywołuje onAction, aż ctx się skończy.
+	// Run receives action taps and calls onAction until ctx is done.
 	Run(ctx context.Context, onAction func(ActionEvent)) error
 }

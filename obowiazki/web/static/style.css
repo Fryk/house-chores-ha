@@ -32,3 +32,4 @@ dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 .notif form { display: inline; }
 .notif button { margin: 8px 8px 0 0; padding: 6px 12px; font-size: .9rem; }
 code { font-size: .85em; overflow-wrap: anywhere; word-break: break-word; }
+header .lang { margin-left: auto; }

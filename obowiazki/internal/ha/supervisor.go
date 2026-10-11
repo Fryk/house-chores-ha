@@ -17,13 +17,13 @@ import (
 	"github.com/coder/websocket/wsjson"
 )
 
-// Supervisor rozmawia z HA przez proxy Supervisora: REST pod /core/api, WebSocket pod /core/websocket.
+// Supervisor talks to Home Assistant through the Supervisor proxy: REST at /core/api, WebSocket at /core/websocket.
 type Supervisor struct {
 	baseURL string
 	token   string
 	http    *http.Client
 	log     *slog.Logger
-	// OnConnected jest wołane po każdym udanym (ponownym) połączeniu WebSocket.
+	// OnConnected is called after every successful (re)connection of the WebSocket.
 	OnConnected func()
 }
 
@@ -83,12 +83,12 @@ func (s *Supervisor) NotifyServices(ctx context.Context) ([]string, error) {
 		if d.Domain != "notify" {
 			continue
 		}
-		// Docs pokazują listę nazw, a HA w praktyce zwraca obiekt nazwa → opis. Obsługujemy oba.
+		// The docs show a list of names; Home Assistant actually returns a name → description object. Accept both.
 		var names []string
 		if err := json.Unmarshal(d.Services, &names); err != nil {
 			var m map[string]json.RawMessage
 			if err := json.Unmarshal(d.Services, &m); err != nil {
-				return nil, fmt.Errorf("nieznany format usług notify: %w", err)
+				return nil, fmt.Errorf("unknown notify services format: %w", err)
 			}
 			for k := range m {
 				names = append(names, k)
@@ -112,7 +112,7 @@ func (s *Supervisor) SelfInfo(ctx context.Context) (SelfInfo, error) {
 	return resp.Data, err
 }
 
-// Run utrzymuje połączenie WebSocket i łączy się ponownie z narastającym opóźnieniem (1 s … 60 s).
+// Run keeps the WebSocket connected, reconnecting with exponential backoff (1 s … 60 s).
 func (s *Supervisor) Run(ctx context.Context, onAction func(ActionEvent)) error {
 	backoff := time.Second
 	for {
@@ -122,9 +122,9 @@ func (s *Supervisor) Run(ctx context.Context, onAction func(ActionEvent)) error 
 			return nil
 		}
 		if time.Since(start) > time.Minute {
-			backoff = time.Second // połączenie działało dłużej, więc zaczynamy od nowa
+			backoff = time.Second // the connection was healthy for a while, start over
 		}
-		s.log.Warn("websocket: rozłączono, ponawiam", "err", err, "za", backoff)
+		s.log.Warn("websocket: disconnected, retrying", "err", err, "in", backoff)
 		select {
 		case <-ctx.Done():
 			return nil
@@ -157,7 +157,7 @@ func (s *Supervisor) session(ctx context.Context, onAction func(ActionEvent)) er
 		return err
 	}
 	if m.Type != "auth_required" {
-		return fmt.Errorf("oczekiwano auth_required, przyszło %q", m.Type)
+		return fmt.Errorf("expected auth_required, got %q", m.Type)
 	}
 	if err := wsjson.Write(ctx, conn, map[string]string{"type": "auth", "access_token": s.token}); err != nil {
 		return err
@@ -166,7 +166,7 @@ func (s *Supervisor) session(ctx context.Context, onAction func(ActionEvent)) er
 		return err
 	}
 	if m.Type != "auth_ok" {
-		return fmt.Errorf("uwierzytelnienie nieudane: %s %s", m.Type, m.Message)
+		return fmt.Errorf("authentication failed: %s %s", m.Type, m.Message)
 	}
 
 	const subID = 1
@@ -175,7 +175,7 @@ func (s *Supervisor) session(ctx context.Context, onAction func(ActionEvent)) er
 	}); err != nil {
 		return err
 	}
-	s.log.Info("websocket: połączono, nasłuchuję mobile_app_notification_action")
+	s.log.Info("websocket: connected, listening for mobile_app_notification_action")
 	if s.OnConnected != nil {
 		s.OnConnected()
 	}
@@ -187,12 +187,12 @@ func (s *Supervisor) session(ctx context.Context, onAction func(ActionEvent)) er
 		switch {
 		case m.Type == "result" && m.ID == subID:
 			if m.Success == nil || !*m.Success {
-				return fmt.Errorf("subscribe_events odrzucone: %s", m.Error)
+				return fmt.Errorf("subscribe_events rejected: %s", m.Error)
 			}
 		case m.Type == "event" && m.ID == subID:
 			ev, err := parseActionEvent(m.Event)
 			if err != nil {
-				s.log.Warn("websocket: nieczytelne zdarzenie", "err", err, "raw", string(m.Event))
+				s.log.Warn("websocket: unreadable event", "err", err, "raw", string(m.Event))
 				continue
 			}
 			onAction(ev)
@@ -216,7 +216,7 @@ func parseActionEvent(raw json.RawMessage) (ActionEvent, error) {
 		return ActionEvent{}, err
 	}
 	if e.Data.Action == "" {
-		return ActionEvent{}, errors.New("brak pola action")
+		return ActionEvent{}, errors.New("missing action field")
 	}
 	return ActionEvent{Action: e.Data.Action, Tag: e.Data.Tag, UserID: e.Context.UserID, At: e.TimeFired, Raw: raw}, nil
 }

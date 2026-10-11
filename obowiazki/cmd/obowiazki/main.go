@@ -1,4 +1,4 @@
-// Obowiązki — appka Home Assistant do domowych obowiązków.
+// Obowiązki (Chores) is a Home Assistant app for household chores.
 package main
 
 import (
@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	_ "time/tzdata" // obraz alpine nie ma danych stref czasowych
+	_ "time/tzdata" // the alpine image has no time zone data
 
 	"github.com/Fryk/house-chores-ha/obowiazki/internal/config"
 	"github.com/Fryk/house-chores-ha/obowiazki/internal/ha"
@@ -22,7 +22,7 @@ import (
 func main() {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	if err := run(log); err != nil {
-		log.Error("zatrzymano z błędem", "err", err)
+		log.Error("stopped with error", "err", err)
 		os.Exit(1)
 	}
 }
@@ -42,7 +42,7 @@ func run(log *slog.Logger) error {
 		client = ha.NewSupervisor(cfg.SupervisorURL, cfg.SupervisorToken, log)
 	} else {
 		client = ha.NewFake(log)
-		log.Info("tryb fake: powiadomienia trafiają do logu i na stronę /dev")
+		log.Info("fake mode: notifications go to the log and to the /dev page")
 	}
 
 	srv, err := server.New(cfg, st, client, log)
@@ -62,14 +62,14 @@ func run(log *slog.Logger) error {
 	}
 	errc := make(chan error, 1)
 	go func() { errc <- httpSrv.ListenAndServe() }()
-	log.Info("nasłuchuję", "addr", httpSrv.Addr)
+	log.Info("listening", "addr", httpSrv.Addr)
 
 	select {
 	case err := <-errc:
 		return err
 	case <-ctx.Done():
 	}
-	log.Info("zatrzymuję")
+	log.Info("shutting down")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := httpSrv.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {

@@ -20,7 +20,7 @@ func TestFakeReplaceClearAndClick(t *testing.T) {
 
 	svc := FakeServices[0]
 	f.Notify(ctx, svc, testNotification("t1"))
-	f.Notify(ctx, svc, testNotification("t1")) // zastępuje pierwsze
+	f.Notify(ctx, svc, testNotification("t1")) // replaces the first one
 	f.Notify(ctx, FakeServices[1], testNotification("t1"))
 	if err := f.Notify(ctx, "persistent_notification", testNotification("x")); err == nil {
 		t.Error("expected error for non mobile_app service")

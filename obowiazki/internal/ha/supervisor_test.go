@@ -17,7 +17,7 @@ import (
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))
 
-// fakeHA udaje proxy Supervisora na tyle, na ile korzysta z niego appka.
+// fakeHA imitates the Supervisor proxy as far as the app uses it.
 type fakeHA struct {
 	t          *testing.T
 	lastPath   string
@@ -78,7 +78,7 @@ func (f *fakeHA) ws(w http.ResponseWriter, r *http.Request) {
 		"context":    map[string]any{"id": "x", "user_id": "u1"},
 	}})
 	if n == 1 {
-		return // pierwsze połączenie zrywamy, żeby sprawdzić ponowne łączenie
+		return // drop the first connection to exercise reconnecting
 	}
 	<-ctx.Done()
 }
@@ -100,7 +100,7 @@ func TestSupervisorNotify(t *testing.T) {
 	if f.lastAuth != "Bearer tok" {
 		t.Errorf("Authorization = %q", f.lastAuth)
 	}
-	// Body to samo service_data, bez opakowania.
+	// The body is the plain service_data, no wrapper.
 	if f.lastBody["message"] != "Test" || f.lastBody["data"].(map[string]any)["tag"] != "t1" {
 		t.Errorf("body = %v", f.lastBody)
 	}
@@ -139,7 +139,7 @@ func TestSupervisorRunReceivesActionsAndReconnects(t *testing.T) {
 	done := make(chan struct{})
 	go func() { s.Run(ctx, func(e ActionEvent) { got <- e }); close(done) }()
 
-	for i := 0; i < 2; i++ { // drugie zdarzenie przychodzi po ponownym połączeniu
+	for i := 0; i < 2; i++ { // the second event arrives after reconnecting
 		select {
 		case sub := <-f.subscribed:
 			if sub["type"] != "subscribe_events" || sub["event_type"] != "mobile_app_notification_action" {

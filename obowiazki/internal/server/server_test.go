@@ -58,13 +58,14 @@ func TestFakeFlowSendClickClear(t *testing.T) {
 		t.Fatalf("index: %d %s", rec.Code, rec.Body.String())
 	}
 
-	rec = do(h, "POST", "/test-notify", url.Values{"service": {"notify." + ha.FakeServices[0]}, "click_action": {"/abc_obowiazki"}}, nil)
+	rec = do(h, "POST", "/test-notify", url.Values{"service": {"notify." + ha.FakeServices[0]}, "click_action": {"/abc_obowiazki"}},
+		map[string]string{"Accept-Language": "pl-PL,pl;q=0.9"})
 	if rec.Code != http.StatusSeeOther || !strings.HasPrefix(rec.Header().Get("Location"), "/?msg=") {
 		t.Fatalf("test-notify: %d %v", rec.Code, rec.Header())
 	}
 	sent := fake.Sent()
 	if len(sent) != 1 || sent[0].Tag() != "chores-test-1" || sent[0].N.Data["clickAction"] != "/abc_obowiazki" ||
-		sent[0].N.Data["channel"] != "Obowiązki" || sent[0].N.Data["priority"] != "high" || len(sent[0].Actions()) != 2 {
+		sent[0].N.Data["channel"] != "Obowiązki" || sent[0].Actions()[0].Title != "Zrobione" || sent[0].N.Data["priority"] != "high" || len(sent[0].Actions()) != 2 {
 		t.Fatalf("sent = %+v", sent)
 	}
 	if p, _, _ := st.Setting(t.Context(), settingPanelPath); p != "/abc_obowiazki" {
@@ -164,5 +165,39 @@ func TestIgnoresForeignActions(t *testing.T) {
 	s.HandleAction(ha.ActionEvent{Action: "ALARM", Tag: "x"})
 	if ev, _ := st.RecentEvents(t.Context(), 10); len(ev) != 0 {
 		t.Fatalf("foreign action logged: %+v", ev)
+	}
+}
+
+func TestLanguages(t *testing.T) {
+	fake := ha.NewFake(quiet)
+	s, _ := newTestServer(t, config.ModeFake, fake)
+	h := s.Handler()
+
+	rec := do(h, "GET", "/", nil, nil)
+	if body := rec.Body.String(); !strings.Contains(body, `<html lang="en">`) || !strings.Contains(body, "Send test notification") {
+		t.Fatalf("default should be English:\n%s", body)
+	}
+	rec = do(h, "GET", "/", nil, map[string]string{"Accept-Language": "pl"})
+	if body := rec.Body.String(); !strings.Contains(body, `<html lang="pl">`) || !strings.Contains(body, "Wyślij testowe powiadomienie") {
+		t.Fatalf("Accept-Language pl should give Polish")
+	}
+	rec = do(h, "GET", "/?lang=pl", nil, nil)
+	c := rec.Result().Cookies()
+	if len(c) != 1 || c[0].Name != "lang" || c[0].Value != "pl" || c[0].Path != "/" {
+		t.Fatalf("lang cookie = %+v", c)
+	}
+
+	do(h, "POST", "/test-notify", url.Values{"service": {ha.FakeServices[0]}}, nil)
+	n := fake.Sent()[0]
+	if n.N.Title != "Chores" || n.N.Data["channel"] != "Chores" || n.Actions()[1].Title != "In 1 hour" {
+		t.Fatalf("English notification = %+v", n.N)
+	}
+	if _, ok := n.N.Data["clickAction"]; ok {
+		t.Error("empty click_action must not be sent")
+	}
+
+	rec = do(h, "POST", "/dev/click", url.Values{"id": {"9"}, "action": {"x"}}, map[string]string{"Accept-Language": "pl"})
+	if loc, _ := url.QueryUnescape(rec.Header().Get("Location")); !strings.Contains(loc, "Nie ma takiego powiadomienia") {
+		t.Fatalf("translated click error, got %q", loc)
 	}
 }

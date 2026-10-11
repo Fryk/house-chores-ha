@@ -1,4 +1,4 @@
-// Package actions koduje i dekoduje identyfikatory akcji powiadomień: CHORES_<RODZAJ>_<wystąpienie>_p<osoba>.
+// Package actions encodes and decodes notification action IDs: CHORES_<KIND>_<occurrence>_p<person>.
 package actions
 
 import (
@@ -27,7 +27,7 @@ func (a Action) String() string {
 	return fmt.Sprintf("%s%s_%d_p%d", prefix, a.Kind, a.OccurrenceID, a.PersonID)
 }
 
-// Parse zwraca ok=false dla akcji, które nie należą do appki (np. z innych automatyzacji).
+// Parse returns ok=false for actions that do not belong to this app (e.g. from other automations).
 func Parse(s string) (Action, bool) {
 	rest, found := strings.CutPrefix(s, prefix)
 	if !found {

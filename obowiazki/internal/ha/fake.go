@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// Fake udaje HA i telefony: zapamiętuje powiadomienia (z zastępowaniem i kasowaniem po tagu,
-// jak aplikacja Companion na Androidzie) i pozwala „kliknąć” ich akcje ze strony /dev.
+// Fake imitates Home Assistant and the phones: it keeps notifications (replacing and clearing
+// them by tag, like the Android Companion app does) and lets the /dev page tap their actions.
 type Fake struct {
 	mu       sync.Mutex
 	sent     []FakeNotification
@@ -26,18 +26,18 @@ type FakeNotification struct {
 	Service  string
 	At       time.Time
 	N        Notification
-	Replaced bool // zastąpione nowszym z tym samym tagiem
-	Cleared  bool // skasowane przez clear_notification
+	Replaced bool // replaced by a newer one with the same tag
+	Cleared  bool // removed by clear_notification
 }
 
-// Visible mówi, czy powiadomienie nadal wisiałoby na telefonie.
+// Visible reports whether the notification would still be shown on the phone.
 func (f FakeNotification) Visible() bool { return !f.Replaced && !f.Cleared }
 
 func (f FakeNotification) Tag() string { s, _ := f.N.Data["tag"].(string); return s }
 
 type FakeAction struct{ Action, Title string }
 
-// Actions zwraca przyciski powiadomienia niezależnie od tego, czy przyszły jako []map, czy []FakeAction.
+// Actions returns the notification buttons whatever Go type they were sent as.
 func (f FakeNotification) Actions() []FakeAction {
 	raw, err := json.Marshal(f.N.Data["actions"])
 	if err != nil {
@@ -48,13 +48,20 @@ func (f FakeNotification) Actions() []FakeAction {
 	return out
 }
 
-var FakeServices = []string{"mobile_app_telefon_testowy_1", "mobile_app_telefon_testowy_2"}
+var FakeServices = []string{"mobile_app_test_phone_1", "mobile_app_test_phone_2"}
+
+var (
+	ErrNoSuchNotification = errors.New("no such notification")
+	ErrNotificationGone   = errors.New("notification is no longer shown")
+	ErrNoSuchAction       = errors.New("notification has no such action")
+	ErrNotRunning         = errors.New("event handling is not running yet")
+)
 
 func NewFake(log *slog.Logger) *Fake { return &Fake{now: time.Now, log: log} }
 
 func (f *Fake) Notify(_ context.Context, service string, n Notification) error {
 	if !strings.HasPrefix(service, "mobile_app_") {
-		return fmt.Errorf("nieznana usługa notify.%s", service)
+		return fmt.Errorf("unknown service notify.%s", service)
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -65,7 +72,7 @@ func (f *Fake) Notify(_ context.Context, service string, n Notification) error {
 				f.sent[i].Cleared = true
 			}
 		}
-		f.log.Info("fake: kasowanie powiadomienia", "service", service, "tag", tag)
+		f.log.Info("fake: clear notification", "service", service, "tag", tag)
 		return nil
 	}
 	for i := range f.sent {
@@ -76,7 +83,7 @@ func (f *Fake) Notify(_ context.Context, service string, n Notification) error {
 	fn := FakeNotification{ID: len(f.sent) + 1, Service: service, At: f.now(), N: n}
 	f.sent = append(f.sent, fn)
 	payload, _ := json.Marshal(n)
-	f.log.Info("fake: powiadomienie", "service", service, "payload", string(payload))
+	f.log.Info("fake: notification", "service", service, "payload", string(payload))
 	return nil
 }
 
@@ -94,14 +101,14 @@ func (f *Fake) Run(ctx context.Context, onAction func(ActionEvent)) error {
 	return nil
 }
 
-// SetHandler ustawia odbiorcę kliknięć bez blokowania (Run robi to samo i czeka na ctx).
+// SetHandler sets the tap receiver without blocking (Run does the same and waits for ctx).
 func (f *Fake) SetHandler(onAction func(ActionEvent)) {
 	f.mu.Lock()
 	f.onAction = onAction
 	f.mu.Unlock()
 }
 
-// Sent zwraca kopię wysłanych powiadomień, od najnowszego.
+// Sent returns a copy of the sent notifications, newest first.
 func (f *Fake) Sent() []FakeNotification {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -112,30 +119,30 @@ func (f *Fake) Sent() []FakeNotification {
 	return out
 }
 
-// Click symuluje tapnięcie przycisku akcji w powiadomieniu o danym ID.
+// Click simulates tapping an action button of the notification with the given ID.
 func (f *Fake) Click(id int, action string) error {
 	f.mu.Lock()
 	if id < 1 || id > len(f.sent) {
 		f.mu.Unlock()
-		return errors.New("nie ma takiego powiadomienia")
+		return ErrNoSuchNotification
 	}
 	n := f.sent[id-1]
 	handler := f.onAction
 	f.mu.Unlock()
 	if !n.Visible() {
-		return errors.New("tego powiadomienia nie ma już na telefonie")
+		return ErrNotificationGone
 	}
 	found := false
 	for _, a := range n.Actions() {
 		found = found || a.Action == action
 	}
 	if !found {
-		return fmt.Errorf("powiadomienie nie ma akcji %q", action)
+		return ErrNoSuchAction
 	}
 	if handler == nil {
-		return errors.New("odbiór zdarzeń jeszcze nie działa")
+		return ErrNotRunning
 	}
-	// Taki sam kształt danych jak w zdarzeniu z Androida: action + wszystkie pola data.
+	// Same data shape as the Android event: action plus every data field.
 	data := map[string]any{"action": action}
 	for k, v := range n.N.Data {
 		if k != "actions" {

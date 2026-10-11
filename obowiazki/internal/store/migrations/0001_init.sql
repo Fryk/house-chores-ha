@@ -3,7 +3,7 @@ CREATE TABLE settings (
     value TEXT NOT NULL
 );
 
--- Tymczasowy dziennik M0: wysłane powiadomienia i kliknięcia akcji.
+-- Temporary M0 log: sent notifications and tapped actions.
 CREATE TABLE dev_event_log (
     id      INTEGER PRIMARY KEY AUTOINCREMENT,
     at      TEXT NOT NULL,

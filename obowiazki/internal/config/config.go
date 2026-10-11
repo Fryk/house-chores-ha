@@ -1,4 +1,4 @@
-// Package config wybiera tryb pracy appki na podstawie zmiennych środowiskowych.
+// Package config picks the run mode from environment variables.
 package config
 
 import "os"
@@ -10,18 +10,18 @@ const (
 	ModeFake       Mode = "fake"
 )
 
-// IngressGateway to jedyny adres, z którego w trybie supervisor przyjmujemy połączenia.
+// IngressGateway is the only address accepted in supervisor mode (Home Assistant ingress).
 const IngressGateway = "172.30.32.2"
 
 type Config struct {
 	Mode            Mode
 	Port            string
 	DataDir         string
-	SupervisorURL   string // http://supervisor; Core API pod /core/api, WebSocket pod /core/websocket
+	SupervisorURL   string // http://supervisor; Core API at /core/api, WebSocket at /core/websocket
 	SupervisorToken string
 }
 
-// Load: z SUPERVISOR_TOKEN → tryb supervisor (port 8099, /data), bez niego → tryb fake (PORT, DATA_DIR).
+// Load: SUPERVISOR_TOKEN set → supervisor mode (port 8099, /data); otherwise fake mode (PORT, DATA_DIR).
 func Load() Config {
 	if tok := os.Getenv("SUPERVISOR_TOKEN"); tok != "" {
 		return Config{

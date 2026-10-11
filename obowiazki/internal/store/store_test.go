@@ -40,7 +40,7 @@ func TestMigrateSettingsAndEvents(t *testing.T) {
 	}
 	s.Close()
 
-	// Po ponownym otwarciu dane zostają, a migracje nie są stosowane drugi raz.
+	// After reopening the data is still there and migrations are not applied twice.
 	s, err = Open(dir)
 	if err != nil {
 		t.Fatal(err)
