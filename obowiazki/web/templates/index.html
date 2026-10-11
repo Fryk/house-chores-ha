@@ -1,0 +1,45 @@
+{{define "content"}}
+<section>
+  <h2>Testowe powiadomienie</h2>
+  <form method="post" action="test-notify">
+    <label for="service">Usługa notify (telefon)</label>
+    <input type="text" id="service" name="service" list="services" value="{{.Service}}" required autocomplete="off">
+    <datalist id="services">{{range .Services}}<option value="{{.}}">{{end}}</datalist>
+    {{if .ServicesErr}}<p class="msg err">Nie udało się pobrać usług z HA: {{.ServicesErr}}</p>{{end}}
+    {{if not .Services}}<p class="muted">Brak usług <code>notify.mobile_app_*</code>. Zainstaluj aplikację Home Assistant na telefonie i zezwól na powiadomienia.</p>{{end}}
+    <label for="click_action">Ścieżka otwierana po tapnięciu w treść (<code>clickAction</code>)</label>
+    <input type="text" id="click_action" name="click_action" value="{{.PanelPath}}" autocomplete="off">
+    <p class="muted">Domyślnie <code>/{{.Slug}}</code>. Dokumentacja nie podaje ścieżki panelu appki — otwórz panel „Obowiązki”, sprawdź adres i wpisz go tutaj. Wartość zostanie zapamiętana.</p>
+    <button type="submit">Wyślij testowe powiadomienie</button>
+  </form>
+</section>
+
+<section>
+  <h2>Ostatnie zdarzenia</h2>
+  {{if .Events}}
+  <table>
+    <tr><th>Kiedy</th><th>Co</th><th>Szczegóły</th></tr>
+    {{range .Events}}
+    <tr>
+      <td>{{.At.Local.Format "02.01 15:04:05"}}</td>
+      <td>{{.Kind}}</td>
+      <td>{{if .Service}}<code>{{.Service}}</code> {{end}}{{if .Tag}}tag <code>{{.Tag}}</code> {{end}}{{if .Action}}<code>{{.Action}}</code> {{end}}{{.Detail}}</td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">Jeszcze nic się nie wydarzyło.</p>{{end}}
+</section>
+
+<section>
+  <h2>Diagnostyka ingress</h2>
+  <dl>
+    <dt>X-Ingress-Path</dt><dd><code>{{or .Base "—"}}</code></dd>
+    <dt>X-Remote-User-Id</dt><dd><code>{{or .User.ID "—"}}</code></dd>
+    <dt>X-Remote-User-Name</dt><dd><code>{{or .User.Name "—"}}</code></dd>
+    <dt>X-Remote-User-Display-Name</dt><dd><code>{{or .User.DisplayName "—"}}</code></dd>
+    <dt>Slug appki</dt><dd><code>{{or .Slug "—"}}</code></dd>
+    <dt>Ingress URL</dt><dd><code>{{or .IngressURL "—"}}</code></dd>
+    <dt>Wersja schematu bazy</dt><dd>{{.SchemaVersion}}</dd>
+  </dl>
+</section>
+{{end}}

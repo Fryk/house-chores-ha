@@ -16,17 +16,7 @@ func TestFakeReplaceClearAndClick(t *testing.T) {
 	ctx := context.Background()
 	f := NewFake(quiet)
 	var got []ActionEvent
-	runCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	ready := make(chan struct{})
-	go func() {
-		f.mu.Lock()
-		f.onAction = func(e ActionEvent) { got = append(got, e) }
-		f.mu.Unlock()
-		close(ready)
-		f.Run(runCtx, func(e ActionEvent) { got = append(got, e) })
-	}()
-	<-ready
+	f.SetHandler(func(e ActionEvent) { got = append(got, e) })
 
 	svc := FakeServices[0]
 	f.Notify(ctx, svc, testNotification("t1"))

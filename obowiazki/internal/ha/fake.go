@@ -89,11 +89,16 @@ func (f *Fake) SelfInfo(context.Context) (SelfInfo, error) {
 }
 
 func (f *Fake) Run(ctx context.Context, onAction func(ActionEvent)) error {
+	f.SetHandler(onAction)
+	<-ctx.Done()
+	return nil
+}
+
+// SetHandler ustawia odbiorcę kliknięć bez blokowania (Run robi to samo i czeka na ctx).
+func (f *Fake) SetHandler(onAction func(ActionEvent)) {
 	f.mu.Lock()
 	f.onAction = onAction
 	f.mu.Unlock()
-	<-ctx.Done()
-	return nil
 }
 
 // Sent zwraca kopię wysłanych powiadomień, od najnowszego.

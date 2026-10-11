@@ -1,0 +1,22 @@
+{{define "layout"}}<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="{{.Base}}/">
+<title>Obowiązki</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<header>
+  <h1>Obowiązki</h1>
+  <span class="badge">tryb {{.Mode}}</span>
+  <a href="./">Start</a>
+  {{if .Fake}}<a href="dev">/dev</a>{{end}}
+</header>
+<main>
+{{if .Msg}}<div class="msg{{if .MsgErr}} err{{end}}">{{.Msg}}</div>{{end}}
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}

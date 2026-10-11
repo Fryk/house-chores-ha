@@ -1,0 +1,34 @@
+{{define "content"}}
+<section>
+  <h2>Powiadomienia na udawanych telefonach</h2>
+  <p class="muted">Tak wyglądałyby na telefonach. Kliknięcie przycisku wysyła do appki zdarzenie <code>mobile_app_notification_action</code>, takie jak z Androida. <a href="dev">Odśwież</a></p>
+  {{range .Sent}}
+  <div class="notif{{if not .Visible}} gone{{end}}">
+    <div><strong>{{or .N.Title "(bez tytułu)"}}</strong> — {{.N.Message}}</div>
+    <div class="muted"><code>{{.Service}}</code> · tag <code>{{.Tag}}</code> · {{.At.Local.Format "15:04:05"}}
+      {{if .Replaced}}· zastąpione nowszym{{end}}{{if .Cleared}}· skasowane{{end}}</div>
+    {{if .Visible}}{{$id := .ID}}{{range .Actions}}
+    <form method="post" action="dev/click">
+      <input type="hidden" name="id" value="{{$id}}">
+      <input type="hidden" name="action" value="{{.Action}}">
+      <button type="submit" title="{{.Action}}">{{.Title}}</button>
+    </form>
+    {{end}}{{end}}
+  </div>
+  {{else}}<p class="muted">Brak powiadomień. Wyślij testowe ze <a href="./">strony głównej</a>.</p>{{end}}
+</section>
+
+<section>
+  <h2>Urządzenia</h2>
+  <p class="muted">Symulacja startu i końca cyklu pralki, suszarki i zmywarki pojawi się w M4.</p>
+  <button disabled>Pralka: start cyklu</button>
+  <button disabled>Pralka: koniec cyklu</button>
+</section>
+
+<section>
+  <h2>Zegar</h2>
+  <p class="muted">Przesuwanie zegara do testów harmonogramów pojawi się razem ze schedulerem w M2. Teraz: {{.Now.Local.Format "02.01.2006 15:04"}}.</p>
+  <button disabled>+1 godzina</button>
+  <button disabled>+1 dzień</button>
+</section>
+{{end}}
