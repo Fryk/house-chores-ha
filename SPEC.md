@@ -280,7 +280,8 @@ backup: cold              # zatrzymuje appkę na czas backupu, bezpieczne dla SQ
 
 Dockerfile **[docs]**:
 - Od Supervisora 2026.04.0 argument `BUILD_FROM` nie jest już podawany domyślnie, a `build.yaml` nie jest używany. Obraz bazowy wpisz jawnie w `FROM`.
-- Multi-stage: `golang:alpine` (build) → `alpine` (runtime) z samą binarką.
+- Multi-stage: `golang:alpine` (build) → `alpine` (runtime) z samą binarką. Runtime nie potrzebuje `ca-certificates` (ruch tylko do `http://supervisor`) ani `tzdata` (wbudowane w binarkę).
+- `modernc.org/sqlite` w aktualnej wersji wymaga Go 1.26, stąd `golang:1.26-alpine`. Obraz M0 po rozpakowaniu ma ok. 33 MB (alpine ok. 13 MB + binarka).
 - Obsługiwane architektury to tylko `aarch64` i `amd64`.
 
 Bezpieczeństwo ingress: serwer nasłuchuje na 8099 (domyślny port ingress; inny wymaga `ingress_port`) i przyjmuje połączenia tylko z adresu bramy ingress `172.30.32.2`, odrzucając wszystkie inne **[docs]**.
@@ -331,7 +332,7 @@ Przyjęte domyślnie, łatwe do zmiany:
 
 ## 11. Kamienie milowe
 
-- **M0 — szkielet.** Układ repo z pkt 9.1, appka działa w trybie fake ze stroną `/dev`, instaluje się w HA, panel „Obowiązki" otwiera się przez ingress w aplikacji HA na telefonie, przycisk wysyła testowe powiadomienie z akcją, a kliknięcie akcji jest widoczne w logu appki. Ten etap weryfikuje wszystkie punkty **[trening]** — po nim zaktualizuj spec.
+- **M0 — szkielet.** Układ repo z pkt 9.1, baza SQLite z migracjami (na razie `settings` i tymczasowy dziennik zdarzeń), appka działa w trybie fake ze stroną `/dev`, instaluje się w HA, panel „Obowiązki" otwiera się przez ingress w aplikacji HA na telefonie, przycisk wysyła testowe powiadomienie z akcją, a kliknięcie akcji jest widoczne w logu appki. Ten etap weryfikuje wszystkie punkty **[trening]** — po nim zaktualizuj spec.
 - **M1 — osoby, katalog i zadania bez terminu.** Ustawienia osób/telefonów/list, katalog startowy, ekran „Szybkie", oba przepływy z pkt 2.3 łącznie z kasowaniem powiadomień i powiadomieniem informacyjnym.
 - **M2 — zadania na dzień.** Powtarzalność, generowanie wystąpień, scheduler, ponawianie, snooze, zaległe.
 - **M3 — zadania tygodniowe.** Zbiorcze powiadomienie i harmonogram narastania.
