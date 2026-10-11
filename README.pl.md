@@ -49,3 +49,7 @@ obowiazki/        appka (nazwa katalogu = slug)
   web/            osadzone szablony i pliki statyczne
 SPEC.md           specyfikacja
 ```
+
+## Licencja
+
+[MIT](LICENSE) © 2026 Paweł Bełza

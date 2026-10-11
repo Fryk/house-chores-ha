@@ -49,3 +49,7 @@ obowiazki/        the app (folder name = slug)
   web/            embedded templates and static files
 SPEC.md           specification (Polish)
 ```
+
+## License
+
+[MIT](LICENSE) © 2026 Paweł Bełza
