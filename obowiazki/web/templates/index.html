@@ -17,16 +17,15 @@
 <section>
   <h2>Ostatnie zdarzenia</h2>
   {{if .Events}}
-  <table>
-    <tr><th>Kiedy</th><th>Co</th><th>Szczegóły</th></tr>
+  <ul class="events">
     {{range .Events}}
-    <tr>
-      <td>{{.At.Local.Format "02.01 15:04:05"}}</td>
-      <td>{{.Kind}}</td>
-      <td>{{if .Service}}<code>{{.Service}}</code> {{end}}{{if .Tag}}tag <code>{{.Tag}}</code> {{end}}{{if .Action}}<code>{{.Action}}</code> {{end}}{{.Detail}}</td>
-    </tr>
+    <li>
+      <div><span class="kind kind-{{.Kind}}">{{.Kind}}</span> <span class="muted">{{.At.Local.Format "02.01 15:04:05"}}</span></div>
+      <div>{{if .Service}}<code>{{.Service}}</code> {{end}}{{if .Tag}}tag <code>{{.Tag}}</code> {{end}}{{if .Action}}<code>{{.Action}}</code>{{end}}</div>
+      {{if .Detail}}{{if eq .Kind "notify"}}<details><summary class="muted">payload</summary><code>{{.Detail}}</code></details>{{else}}<div class="muted">{{.Detail}}</div>{{end}}{{end}}
+    </li>
     {{end}}
-  </table>
+  </ul>
   {{else}}<p class="muted">Jeszcze nic się nie wydarzyło.</p>{{end}}
 </section>
 
