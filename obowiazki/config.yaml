@@ -1,7 +1,7 @@
-name: "Obowiązki"
+name: "Obowiązki (House Chores)"
 version: "0.1.0"
 slug: obowiazki
-description: "Domowe obowiązki z przypomnieniami przez aplikację Home Assistant"
+description: "Household chores with reminders via the Home Assistant app / Domowe obowiązki z przypomnieniami"
 url: "https://github.com/Fryk/house-chores-ha"
 arch:
   - amd64
@@ -10,6 +10,6 @@ ingress: true
 ingress_port: 8099
 panel_icon: mdi:broom
 panel_title: "Obowiązki"
-panel_admin: false        # domyślnie true = tylko admini widzą panel
-homeassistant_api: true   # dostęp do http://supervisor/core/api
-backup: cold              # zatrzymuje appkę na czas backupu, bezpieczne dla SQLite
+panel_admin: false        # default true = only admins see the panel
+homeassistant_api: true   # access to http://supervisor/core/api
+backup: cold              # stop the app during backups, safe for SQLite

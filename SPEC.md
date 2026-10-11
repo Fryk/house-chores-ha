@@ -97,7 +97,7 @@ Pozycje związane z pralką, suszarką i zmywarką po skonfigurowaniu wyzwalaczy
 
 ## 4. Osoby i odbiorcy
 
-- **Osoba**: nazwa, kolor (do kalendarza i wykresów), `ha_user_id`, jedna lub więcej usług `notify.mobile_app_*`.
+- **Osoba**: nazwa, kolor (do kalendarza i wykresów), `ha_user_id`, język powiadomień (pl/en), jedna lub więcej usług `notify.mobile_app_*`.
 - **Lista odbiorców**: nazwana, zapisana grupa osób. Wbudowana lista „Wszyscy". Appka trzyma listy, żeby nie wypełniać ich przy każdym zadaniu.
 - Zadania `dated` i `weekly`: odbiorcą jest „Wszyscy" albo wybrana lista.
 - Zadania `adhoc` i `triggered`: zawsze „Wszyscy".
@@ -152,7 +152,7 @@ Akcje:
 
 `/data` to trwały wolumen appki **[docs]**.
 
-- `person(id, name, color, ha_user_id, active)`
+- `person(id, name, color, ha_user_id, language[pl|en], active)`
 - `person_device(id, person_id, notify_service)`
 - `recipient_list(id, name, is_builtin_all)` + `recipient_list_member(list_id, person_id)`
 - `task(id, name, type[dated|weekly|adhoc|triggered], recurrence_json, recipient_list_id, notify_on_done, weight, counts_in_stats, catalog_key, active, created_at)`
@@ -178,7 +178,9 @@ Uwagi:
 
 ## 8. UI
 
-Mobile-first, po polsku, otwierane w aplikacji HA przez ingress. Wszystkie URL-e względne; ścieżka bazowa z nagłówka `X-Ingress-Path` **[docs]**. Ingress przenosi HTTP/1.x, streaming i WebSockety **[docs]**. Rozpoznanie zalogowanego użytkownika HA z nagłówków, które Supervisor dodaje do każdego żądania ingress: `X-Remote-User-Id`, `X-Remote-User-Name`, `X-Remote-User-Display-Name` **[docs]**. Fallback (brak nagłówka albo użytkownik niepowiązany z osobą): wybór osoby zapamiętany w `localStorage`.
+Mobile-first, po polsku i po angielsku, otwierane w aplikacji HA przez ingress. Język: wybór z przełącznika (pamiętany w ciasteczku), inaczej `Accept-Language`, domyślnie angielski. Treść powiadomień w języku osoby (od M1 pole `person.language`; w M0 język strony, z której wysłano test). Nazwy w katalogu obowiązków (pkt 3) w obu językach.
+
+Repozytorium jest publiczne: README i dokumentacja appki po angielsku i po polsku, kod, komentarze i logi po angielsku, bez danych prywatnych i sekretów. Wszystkie URL-e względne; ścieżka bazowa z nagłówka `X-Ingress-Path` **[docs]**. Ingress przenosi HTTP/1.x, streaming i WebSockety **[docs]**. Rozpoznanie zalogowanego użytkownika HA z nagłówków, które Supervisor dodaje do każdego żądania ingress: `X-Remote-User-Id`, `X-Remote-User-Name`, `X-Remote-User-Display-Name` **[docs]**. Fallback (brak nagłówka albo użytkownik niepowiązany z osobą): wybór osoby zapamiętany w `localStorage`.
 
 Ekrany:
 1. **Do zrobienia** — otwarte wystąpienia: dziś i zaległe, potem „w tym tygodniu". Duży przycisk „Zrobione" przy każdym. Sekcja „Nieprzypisane" z przyciskiem „To ja".
@@ -262,10 +264,10 @@ Stack (lekki): **Go**, jeden binarny plik; SQLite przez `modernc.org/sqlite` (be
 
 `config.yaml` (klucze potwierdzone **[docs]**):
 ```yaml
-name: "Obowiązki"
+name: "Obowiązki (House Chores)"
 version: "0.1.0"
 slug: obowiazki
-description: "Domowe obowiązki z przypomnieniami przez aplikację Home Assistant"
+description: "Household chores with reminders via the Home Assistant app / Domowe obowiązki z przypomnieniami"
 arch:
   - amd64
   - aarch64
