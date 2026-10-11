@@ -1,6 +1,6 @@
 # Obowiązki — app (add-on) do Home Assistant
 
-Specyfikacja dla Claude Code. Wersja 0.3, stan na 2026-10-11.
+Specyfikacja dla Claude Code. Wersja 0.4, stan na 2026-10-11.
 
 Repozytorium: https://github.com/Fryk/house-chores-ha
 
@@ -156,15 +156,23 @@ Akcje:
 - `task(id, name, type[dated|weekly|adhoc|triggered], recurrence_json, recipient_list_id, notify_on_done, weight, counts_in_stats, catalog_key, active, created_at)`
 - `appliance(id, name, detect_kind[state|power], entity_id, detect_config_json, fsm_state, fsm_changed_at)`
 - `trigger(id, appliance_id, on_event[cycle_start|cycle_end], task_id, mode[ask_who|needs_doing])`
-- `occurrence(id, task_id, due_date, week_start, status[open|done|missed|skipped], source[schedule|manual|trigger], requested_by, requested_at, done_by, done_at)`
+- `occurrence(id, task_id, due_date, week_start, status[open|done|missed|skipped], source[schedule|manual|trigger], requested_by, requested_at, done_by, done_at, weight_at_done)`
+- `weight_change(id, task_id, old_weight, new_weight, changed_at, source[manual|import], reason)`
 - `notification_state(occurrence_id, person_id, last_notified_at, snoozed_until)`
 - `settings(key, value)`
 
 Uwagi:
 - `done_by` może być puste (wpisy „Nieprzypisane").
 - `notify_on_done`: domyślnie `true` dla `adhoc` i `triggered`, `false` dla `dated` i `weekly`.
-- `weight`: waga zadania do porównań, domyślnie 1.
 - `counts_in_stats`: domyślnie `true`; pozwala wyłączyć zadanie z porównań.
+
+### 7.1 Wagi nie działają wstecz
+
+- `task.weight` to waga **bieżąca**, liczba całkowita 1–10, domyślnie 1.
+- W chwili odhaczenia appka kopiuje ją do `occurrence.weight_at_done`. Wszystkie porównania, kalendarz i eksport liczą wyłącznie z `weight_at_done`, nigdy z `task.weight`.
+- Zmiana wagi (ręczna lub z importu) obowiązuje od momentu zapisu i dotyczy tylko wykonań odhaczonych później. Minione okresy nie zmieniają wyniku.
+- Poprawka wpisu w historii (zmiana osoby) zachowuje jego `weight_at_done`. Wykonanie dopisane ręcznie z datą wsteczną dostaje wagę, która obowiązywała w tej dacie, odczytaną z `weight_change`.
+- Każda zmiana trafia do `weight_change` razem ze źródłem i uzasadnieniem; historia zmian jest widoczna przy zadaniu.
 
 ## 8. UI
 
@@ -175,30 +183,74 @@ Ekrany:
 2. **Szybkie** — kafelki zadań `adhoc` z przyciskami „Trzeba zrobić" / „Zrobione" i informacją o ostatnim wykonaniu.
 3. **Kalendarz** — widok miesiąca. W każdym dniu kropki w kolorach osób za wykonane zadania i znacznik pominiętych. Tapnięcie dnia pokazuje listę: co, kto, o której, co przepadło. Dni przyszłe pokazują zaplanowane zadania `dated`. Nawigacja między miesiącami.
 4. **Porównanie** — przełącznik okresu: tydzień / 2 tygodnie / miesiąc, ze strzałkami do poprzednich okresów. Dla każdej osoby: liczba wykonań, suma ważona, udział procentowy, poziome paski w kolorze osoby. Pod spodem tabela zadanie × osoba. Osobno liczba zadań pominiętych i nieprzypisanych. Paski w czystym CSS, bez biblioteki wykresów. Przycisk „Eksport dla LLM" (pkt 8.1).
-5. **Zadania** — lista i edycja definicji (nazwa, typ, powtarzalność, odbiorcy, waga, czy liczyć w porównaniu, powiadomienie o wykonaniu), katalog z pkt 3 oraz widok „Wagi": jedna tabela wszystkich zadań z polem wagi, do szybkiej ręcznej zmiany wielu naraz.
+5. **Zadania** — lista i edycja definicji (nazwa, typ, powtarzalność, odbiorcy, waga, czy liczyć w porównaniu, powiadomienie o wykonaniu), katalog z pkt 3 oraz widok „Wagi": jedna tabela wszystkich zadań z polem wagi, do szybkiej ręcznej zmiany wielu naraz, z przyciskiem „Importuj wagi" (pkt 8.2).
 6. **Ustawienia** — osoby i telefony, listy odbiorców, urządzenia i wyzwalacze, okno powiadomień, interwał ponowień, harmonogram narastania, test powiadomienia.
 
 Wpis w historii da się poprawić: zmienić osobę albo usunąć błędne odhaczenie.
 
 ### 8.1 Eksport miesiąca dla LLM
 
-Cel: raz na jakiś czas wkleić dane do dowolnego LLM, dostać propozycję nowych wag i wpisać je ręcznie w widoku „Wagi". Appka sama nie woła żadnego modelu i nie importuje odpowiedzi.
+Cel: raz na jakiś czas wkleić dane do dowolnego LLM, dostać propozycję nowych wag i wczytać ją z powrotem (pkt 8.2). Appka sama nie woła żadnego modelu; wklejanie w obie strony robi człowiek.
 
-Przycisk na ekranie „Porównanie" → wybór miesiąca → appka generuje jeden tekst Markdown: gotowy prompt, a pod nim dane.
+Przycisk na ekranie „Porównanie" → wybór miesiąca → appka generuje jeden tekst Markdown z trzech części:
+
+1. **Instrukcja** — treść edytowalna w ustawieniach, domyślna wbudowana. Prosi o ocenę, czy wagi oddają realny wysiłek (czas, uciążliwość, częstotliwość), o nowe wagi w skali 1–10 i o wskazanie zadań, które wyglądają na brakujące lub zdublowane.
+2. **Wymagany format odpowiedzi** — stały, doklejany przez appkę, nieedytowalny, żeby import zawsze działał.
+3. **Dane** — blok JSON.
 
 Dane w eksporcie:
-- lista aktywnych zadań: nazwa, typ, aktualna waga, czy liczone w porównaniu
+- `period` (np. `2026-09`) i `exported_at`
+- lista aktywnych zadań: `task_id`, nazwa, typ, aktualna waga, czy liczone w porównaniu
 - dla każdego zadania: liczba wykonań per osoba, liczba pominiętych i nieprzypisanych
-- podsumowanie per osoba: liczba wykonań, suma ważona, udział procentowy
+- podsumowanie per osoba: liczba wykonań, suma ważona (z `weight_at_done`), udział procentowy
 - osoby pod nazwami z appki, bez identyfikatorów HA i nazw urządzeń
 
-Prompt (treść edytowalna w ustawieniach, domyślna wbudowana) prosi o:
-- ocenę, czy wagi oddają realny wysiłek: czas, uciążliwość, częstotliwość
-- propozycję nowych wag w skali 1–10 z jednozdaniowym uzasadnieniem dla każdej zmiany
-- wynik jako tabelę `zadanie | obecna waga | proponowana waga | dlaczego`, żeby dało się ją przepisać do widoku „Wagi"
-- wskazanie zadań, które wyglądają na brakujące lub zdublowane
+Wymagany format odpowiedzi, wpisany w prompt dosłownie razem z przykładem: dokładnie jeden blok kodu JSON, bez tekstu przed nim i po nim.
+
+```json
+{
+  "schema": "obowiazki-weights/1",
+  "period": "2026-09",
+  "weights": [
+    {
+      "task_id": 12,
+      "name": "Sprzątanie łazienki",
+      "current_weight": 1,
+      "proposed_weight": 6,
+      "reason": "Zajmuje około 40 minut i jest najbardziej uciążliwe z tygodniowych."
+    }
+  ],
+  "notes": ["Brakuje zadania: wymiana worka w odkurzaczu."]
+}
+```
+
+Reguły formatu podane w prompcie:
+- `weights` zawiera **każde** zadanie z danych, także te bez zmiany (wtedy `proposed_weight` = `current_weight`)
+- `task_id`, `name` i `current_weight` przepisane z danych bez zmian
+- `proposed_weight`: liczba całkowita 1–10
+- `reason`: jedno zdanie po polsku
+- `notes`: uwagi o brakujących lub zdublowanych zadaniach, wyłącznie informacyjne
 
 Wydanie tekstu: przycisk „Kopiuj" oraz „Pobierz .md". Schowek w WebView aplikacji HA bywa zablokowany **[trening]**, więc tekst jest też widoczny w polu tekstowym do ręcznego zaznaczenia.
+
+### 8.2 Import wag
+
+Przycisk „Importuj wagi" w widoku „Wagi" → pole tekstowe do wklejenia odpowiedzi LLM albo wybór pliku.
+
+Parsowanie, tolerancyjne na typowe odstępstwa modeli:
+- appka wyciąga pierwszy obiekt JSON z tekstu, także gdy jest otoczony ogrodzeniem ```` ```json ```` albo dodatkowym komentarzem
+- `schema` musi być `obowiazki-weights/1`; inna wartość lub niepoprawny JSON = czytelny błąd, nic nie jest zmieniane
+
+Walidacja wiersz po wierszu:
+- `task_id` nie istnieje lub zadanie jest nieaktywne → wiersz pominięty, z ostrzeżeniem
+- `name` różni się od nazwy w bazie → ostrzeżenie (dopasowanie idzie po `task_id`, nie po nazwie)
+- `proposed_weight` nie jest liczbą całkowitą 1–10 → wiersz odrzucony
+- `current_weight` różni się od wagi w bazie → ostrzeżenie „waga zmieniła się od eksportu"
+- zadania z bazy nieobecne w odpowiedzi → zostają bez zmian
+
+Potem **podgląd**, bez którego nic się nie zapisuje: tabela `zadanie | obecnie | propozycja | uzasadnienie`, tylko wiersze ze zmianą, każdy z polem wyboru (domyślnie zaznaczone) i możliwością ręcznej korekty propozycji. Pod tabelą `notes` jako lista do przeczytania. Przycisk „Zastosuj zaznaczone" zapisuje wagi w jednej transakcji i dodaje wpisy `weight_change` ze źródłem `import` i uzasadnieniem z `reason`.
+
+Zgodnie z pkt 7.1 zaimportowane wagi obowiązują od chwili zastosowania, a miesiąc, który był analizowany, zachowuje stare wyniki.
 
 ## 9. Technikalia appki
 
@@ -271,7 +323,7 @@ Przyjęte domyślnie, łatwe do zmiany:
 8. Pralka: pytamy kto włączył i kto wyjął. Suszarka i zmywarka: tylko kto wyjął.
 9. Pytanie „Kto włączył?" jest wysyłane raz, bez ponawiania.
 10. Porównanie liczy wykonania oraz sumę ważoną; wszystkie wagi startują od 1, skala 1–10.
-11. Zmiana wagi działa wstecz: porównanie zawsze liczy aktualnymi wagami, także dla minionych okresów.
+11. Nowa waga obowiązuje od chwili zapisu, bez możliwości ustawienia daty „od kiedy". Wagi z importu po analizie września zaczynają działać w dniu importu, a nie od 1 października.
 
 ## 11. Kamienie milowe
 
@@ -280,10 +332,10 @@ Przyjęte domyślnie, łatwe do zmiany:
 - **M2 — zadania na dzień.** Powtarzalność, generowanie wystąpień, scheduler, ponawianie, snooze, zaległe.
 - **M3 — zadania tygodniowe.** Zbiorcze powiadomienie i harmonogram narastania.
 - **M4 — urządzenia.** Konfiguracja urządzeń, automat cyklu (stan i moc), tryby `ask_who` i `needs_doing`, „Nieprzypisane".
-- **M5 — kalendarz i porównanie.** Oba ekrany, edycja wpisów historii, widok „Wagi", eksport dla LLM.
+- **M5 — kalendarz i porównanie.** Oba ekrany, edycja wpisów historii, widok „Wagi", eksport dla LLM, import wag z podglądem.
 - **M6 — dopracowanie.** Odporność na restart i utratę WebSocketu, test backupu i przywrócenia.
 
-Testy jednostkowe z wstrzykiwanym zegarem: scheduler i powtarzalność (zmiana czasu letni/zimowy w Europe/Warsaw, restart w środku okna, przestój przez noc, granica 20:00), automat urządzeń (skoki stanu, cykl kończący się w nocy, nowy cykl przy otwartym „wyjęciu"), agregacje porównania (granice tygodnia i miesiąca).
+Testy jednostkowe z wstrzykiwanym zegarem: scheduler i powtarzalność (zmiana czasu letni/zimowy w Europe/Warsaw, restart w środku okna, przestój przez noc, granica 20:00), automat urządzeń (skoki stanu, cykl kończący się w nocy, nowy cykl przy otwartym „wyjęciu"), agregacje porównania (granice tygodnia i miesiąca; zmiana wagi w środku okresu nie rusza wcześniejszych wykonań), import wag (JSON w ogrodzeniu i z komentarzem wokół, zły `schema`, nieznany `task_id`, waga spoza 1–10, rozjechane `current_weight`).
 
 ## 12. Źródła
 
