@@ -92,7 +92,7 @@ func (f *Fake) NotifyServices(context.Context) ([]string, error) {
 }
 
 func (f *Fake) SelfInfo(context.Context) (SelfInfo, error) {
-	return SelfInfo{Slug: "local_obowiazki"}, nil
+	return SelfInfo{Slug: "local_house_chores"}, nil
 }
 
 func (f *Fake) Run(ctx context.Context, onAction func(ActionEvent)) error {

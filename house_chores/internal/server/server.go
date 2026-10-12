@@ -19,12 +19,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/actions"
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/config"
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/ha"
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/i18n"
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/store"
-	"github.com/Fryk/house-chores-ha/obowiazki/web"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/actions"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/config"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/ha"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/i18n"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/store"
+	"github.com/Fryk/house-chores-ha/house_chores/web"
 )
 
 const (

@@ -213,7 +213,7 @@ Wymagany format odpowiedzi, wpisany w prompt dosłownie razem z przykładem: dok
 
 ```json
 {
-  "schema": "obowiazki-weights/1",
+  "schema": "house-chores-weights/1",
   "period": "2026-09",
   "weights": [
     {
@@ -243,7 +243,7 @@ Przycisk „Importuj wagi" w widoku „Wagi" → pole tekstowe do wklejenia odpo
 
 Parsowanie, tolerancyjne na typowe odstępstwa modeli:
 - appka wyciąga pierwszy obiekt JSON z tekstu, także gdy jest otoczony ogrodzeniem ```` ```json ```` albo dodatkowym komentarzem
-- `schema` musi być `obowiazki-weights/1`; inna wartość lub niepoprawny JSON = czytelny błąd, nic nie jest zmieniane
+- `schema` musi być `house-chores-weights/1`; inna wartość lub niepoprawny JSON = czytelny błąd, nic nie jest zmieniane
 
 Walidacja wiersz po wierszu:
 - `task_id` nie istnieje lub zadanie jest nieaktywne → wiersz pominięty, z ostrzeżeniem
@@ -266,7 +266,7 @@ Stack (lekki): **Go**, jeden binarny plik; SQLite przez `modernc.org/sqlite` (be
 ```yaml
 name: "Obowiązki (House Chores)"
 version: "0.1.0"
-slug: obowiazki
+slug: house_chores
 description: "Household chores with reminders via the Home Assistant app / Domowe obowiązki z przypomnieniami"
 arch:
   - amd64
@@ -294,7 +294,7 @@ Repo `Fryk/house-chores-ha` jest jednocześnie repozytorium appek HA. Układ:
 
 ```text
 repository.yaml        # nazwa i opis repozytorium appek
-obowiazki/             # katalog appki (nazwa = slug)
+house_chores/          # katalog appki (nazwa = slug)
   config.yaml
   Dockerfile
   DOCS.md, README.md, CHANGELOG.md, icon.png
@@ -304,7 +304,7 @@ SPEC.md
 
 `repository.yaml` w katalogu głównym jest wymagany; klucz `name` obowiązkowy, `url` i `maintainer` opcjonalne **[docs]**.
 
-Instalacja: Ustawienia → Apps → „App store” (prawy dolny róg) → dodanie URL repozytorium w polu repozytoriów → Zapisz **[docs]**. Dokładne etykiety menu w aktualnym UI potwierdzić przy instalacji w M0. Uwaga: dokumentacja nie opisuje instalacji z prywatnego repo **[trening — przyjmujemy, że Supervisor go nie sklonuje bez dodatkowej konfiguracji]**. Jeśli repo ma zostać prywatne, alternatywą jest lokalna appka: skopiowanie katalogu `obowiazki/` do podkatalogu `/local_apps` na hoście HA (przez appkę Samba — udział `local_apps` — albo SSH), potem w sklepie ⋮ → „Check for updates” i appka pojawia się w sekcji „Local apps” **[docs]**. Dawna nazwa katalogu `/addons` nie jest już używana w docs.
+Instalacja: Ustawienia → Apps → „App store” (prawy dolny róg) → dodanie URL repozytorium w polu repozytoriów → Zapisz **[docs]**. Dokładne etykiety menu w aktualnym UI potwierdzić przy instalacji w M0. Uwaga: dokumentacja nie opisuje instalacji z prywatnego repo **[trening — przyjmujemy, że Supervisor go nie sklonuje bez dodatkowej konfiguracji]**. Jeśli repo ma zostać prywatne, alternatywą jest lokalna appka: skopiowanie katalogu `house_chores/` do podkatalogu `/local_apps` na hoście HA (przez appkę Samba — udział `local_apps` — albo SSH), potem w sklepie ⋮ → „Check for updates” i appka pojawia się w sekcji „Local apps” **[docs]**. Dawna nazwa katalogu `/addons` nie jest już używana w docs.
 
 ### 9.2 Tryby uruchamiania
 

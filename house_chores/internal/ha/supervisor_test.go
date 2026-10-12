@@ -37,7 +37,7 @@ func (f *fakeHA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/core/api/services":
 		io.WriteString(w, f.services)
 	case "/addons/self/info":
-		io.WriteString(w, `{"result":"ok","data":{"slug":"abc123_obowiazki","ingress_url":"/api/hassio_ingress/xyz/"}}`)
+		io.WriteString(w, `{"result":"ok","data":{"slug":"abc123_house_chores","ingress_url":"/api/hassio_ingress/xyz/"}}`)
 	case "/core/websocket":
 		f.ws(w, r)
 	default:
@@ -126,7 +126,7 @@ func TestSupervisorNotifyServices(t *testing.T) {
 func TestSupervisorSelfInfo(t *testing.T) {
 	_, s := newFakeHA(t)
 	info, err := s.SelfInfo(context.Background())
-	if err != nil || info.Slug != "abc123_obowiazki" || info.IngressURL != "/api/hassio_ingress/xyz/" {
+	if err != nil || info.Slug != "abc123_house_chores" || info.IngressURL != "/api/hassio_ingress/xyz/" {
 		t.Fatalf("SelfInfo = %+v, %v", info, err)
 	}
 }

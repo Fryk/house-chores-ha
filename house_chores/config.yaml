@@ -1,6 +1,6 @@
 name: "Obowiązki (House Chores)"
 version: "0.1.0"
-slug: obowiazki
+slug: house_chores
 description: "Household chores with reminders via the Home Assistant app / Domowe obowiązki z przypomnieniami"
 url: "https://github.com/Fryk/house-chores-ha"
 arch:

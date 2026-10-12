@@ -23,16 +23,16 @@ Appka Home Assistanta (dawniej add-on) do dzielenia się domowymi obowiązkami. 
 2. Zainstaluj **Obowiązki** i uruchom. Pierwsze uruchomienie buduje obraz na urządzeniu, co trwa kilka minut.
 3. Otwórz panel **Obowiązki** w menu bocznym.
 
-Szczegóły: [obowiazki/DOCS.md](obowiazki/DOCS.md).
+Szczegóły: [house_chores/DOCS.md](house_chores/DOCS.md).
 
 ## Rozwój
 
 Appka to jedna binarka Go z SQLite (`modernc.org/sqlite`, bez CGO) i HTML renderowanym po stronie serwera. Bez zmiennej `SUPERVISOR_TOKEN` działa w **trybie fake**: powiadomienia trafiają do logu i na stronę `/dev`, gdzie można klikać ich przyciski.
 
 ```sh
-cd obowiazki
+cd house_chores
 go test ./...
-DATA_DIR=./data PORT=8080 go run ./cmd/obowiazki
+DATA_DIR=./data PORT=8080 go run ./cmd/house-chores
 # otwórz http://localhost:8080 i http://localhost:8080/dev
 ```
 
@@ -42,7 +42,7 @@ Wymaga Go 1.26 lub nowszego. Specyfikacja projektu: [SPEC.md](SPEC.md).
 
 ```text
 repository.yaml   metadane repozytorium appek Home Assistanta
-obowiazki/        appka (nazwa katalogu = slug)
+house_chores/     appka (nazwa katalogu = slug)
   config.yaml     konfiguracja appki
   Dockerfile
   cmd/, internal/ kod Go

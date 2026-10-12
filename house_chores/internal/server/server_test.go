@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/config"
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/ha"
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/store"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/config"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/ha"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/store"
 )
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -58,17 +58,17 @@ func TestFakeFlowSendClickClear(t *testing.T) {
 		t.Fatalf("index: %d %s", rec.Code, rec.Body.String())
 	}
 
-	rec = do(h, "POST", "/test-notify", url.Values{"service": {"notify." + ha.FakeServices[0]}, "click_action": {"/abc_obowiazki"}},
+	rec = do(h, "POST", "/test-notify", url.Values{"service": {"notify." + ha.FakeServices[0]}, "click_action": {"/abc_house_chores"}},
 		map[string]string{"Accept-Language": "pl-PL,pl;q=0.9"})
 	if rec.Code != http.StatusSeeOther || !strings.HasPrefix(rec.Header().Get("Location"), "/?msg=") {
 		t.Fatalf("test-notify: %d %v", rec.Code, rec.Header())
 	}
 	sent := fake.Sent()
-	if len(sent) != 1 || sent[0].Tag() != "chores-test-1" || sent[0].N.Data["clickAction"] != "/abc_obowiazki" ||
+	if len(sent) != 1 || sent[0].Tag() != "chores-test-1" || sent[0].N.Data["clickAction"] != "/abc_house_chores" ||
 		sent[0].N.Data["channel"] != "Obowiązki" || sent[0].Actions()[0].Title != "Zrobione" || sent[0].N.Data["priority"] != "high" || len(sent[0].Actions()) != 2 {
 		t.Fatalf("sent = %+v", sent)
 	}
-	if p, _, _ := st.Setting(t.Context(), settingPanelPath); p != "/abc_obowiazki" {
+	if p, _, _ := st.Setting(t.Context(), settingPanelPath); p != "/abc_house_chores" {
 		t.Errorf("panel path not saved: %q", p)
 	}
 

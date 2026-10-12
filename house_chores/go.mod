@@ -1,4 +1,4 @@
-module github.com/Fryk/house-chores-ha/obowiazki
+module github.com/Fryk/house-chores-ha/house_chores
 
 go 1.26.0
 

@@ -23,16 +23,16 @@ A Home Assistant app (formerly add-on) for sharing household chores. Reminders a
 2. Install **Obowiązki** and start it. The first start builds the image on your device, which takes a few minutes.
 3. Open the **Obowiązki** panel in the sidebar.
 
-Details: [obowiazki/DOCS.md](obowiazki/DOCS.md).
+Details: [house_chores/DOCS.md](house_chores/DOCS.md).
 
 ## Development
 
 The app is a single Go binary with SQLite (`modernc.org/sqlite`, no CGO) and server-rendered HTML. Without the `SUPERVISOR_TOKEN` environment variable it runs in **fake mode**: notifications go to the log and to the `/dev` page, where you can tap their buttons.
 
 ```sh
-cd obowiazki
+cd house_chores
 go test ./...
-DATA_DIR=./data PORT=8080 go run ./cmd/obowiazki
+DATA_DIR=./data PORT=8080 go run ./cmd/house-chores
 # open http://localhost:8080 and http://localhost:8080/dev
 ```
 
@@ -42,7 +42,7 @@ Requires Go 1.26 or newer. The design specification is in [SPEC.md](SPEC.md) (in
 
 ```text
 repository.yaml   Home Assistant app repository metadata
-obowiazki/        the app (folder name = slug)
+house_chores/     the app (folder name = slug)
   config.yaml     app configuration
   Dockerfile
   cmd/, internal/ Go code

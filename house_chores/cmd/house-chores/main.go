@@ -13,10 +13,10 @@ import (
 	"time"
 	_ "time/tzdata" // the alpine image has no time zone data
 
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/config"
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/ha"
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/server"
-	"github.com/Fryk/house-chores-ha/obowiazki/internal/store"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/config"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/ha"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/server"
+	"github.com/Fryk/house-chores-ha/house_chores/internal/store"
 )
 
 func main() {
