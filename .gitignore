@@ -1,0 +1,4 @@
+house_chores/data/
+*.db
+*.db-wal
+*.db-shm

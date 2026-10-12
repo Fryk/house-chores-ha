@@ -1,0 +1,23 @@
+{{define "layout"}}<!doctype html>
+<html lang="{{.L}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="{{.Base}}/">
+<title>{{.L.T "app.name"}}</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<header>
+  <h1>{{.L.T "app.name"}}</h1>
+  <span class="badge">{{.L.T "mode" .Mode}}</span>
+  <a href="./">{{.L.T "nav.home"}}</a>
+  {{if .Fake}}<a href="dev">/dev</a>{{end}}
+  <a class="lang" href="?lang={{.OtherLang}}" hreflang="{{.OtherLang}}">{{.L.T "nav.lang_other"}}</a>
+</header>
+<main>
+{{if .Msg}}<div class="msg{{if .MsgErr}} err{{end}}">{{.Msg}}</div>{{end}}
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}
