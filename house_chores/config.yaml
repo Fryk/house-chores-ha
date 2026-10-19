@@ -1,7 +1,7 @@
-name: "Obowiązki (House Chores)"
+name: "House Chores"
 version: "0.1.0"
 slug: house_chores
-description: "Household chores with reminders via the Home Assistant app / Domowe obowiązki z przypomnieniami"
+description: "Household chores with reminders via the Home Assistant Companion app"
 url: "https://github.com/Fryk/house-chores-ha"
 arch:
   - amd64
@@ -9,7 +9,7 @@ arch:
 ingress: true
 ingress_port: 8099
 panel_icon: mdi:broom
-panel_title: "Obowiązki"
+panel_title: "House Chores"   # not translatable in Home Assistant; the UI inside is (en, pl)
 panel_admin: false        # default true = only admins see the panel
 homeassistant_api: true   # access to http://supervisor/core/api
 backup: cold              # stop the app during backups, safe for SQLite

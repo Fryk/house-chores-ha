@@ -189,7 +189,7 @@ func TestLanguages(t *testing.T) {
 
 	do(h, "POST", "/test-notify", url.Values{"service": {ha.FakeServices[0]}}, nil)
 	n := fake.Sent()[0]
-	if n.N.Title != "Chores" || n.N.Data["channel"] != "Chores" || n.Actions()[1].Title != "In 1 hour" {
+	if n.N.Title != "House Chores" || n.N.Data["channel"] != "House Chores" || n.Actions()[1].Title != "In 1 hour" {
 		t.Fatalf("English notification = %+v", n.N)
 	}
 	if _, ok := n.N.Data["clickAction"]; ok {

@@ -1,4 +1,4 @@
-# Obowiązki
+# House Chores
 
 [English](#english) · [Polski](#polski)
 
@@ -6,7 +6,7 @@
 
 ### What works now (M0)
 
-- The **Obowiązki** panel opens in the Home Assistant sidebar (also for non-admin users).
+- The **House Chores** panel opens in the Home Assistant sidebar (also for non-admin users).
 - **Test notification:** pick your phone's `notify.mobile_app_*` service and press *Send test notification*. The notification has two buttons, *Done* and *In 1 hour*.
 - Tapping a button shows up in the app log (*Log* tab) and in *Recent events*. *Done* also removes the notification from the phone.
 - *Ingress diagnostics* shows what Home Assistant passes to the app (base path, signed-in user).
@@ -15,7 +15,7 @@ The UI language follows your browser or phone language; use the switch in the he
 
 ### Path opened by tapping a notification
 
-The Home Assistant documentation does not say which path opens an app panel. Open the **Obowiązki** panel, copy the path from the address bar (the part after the host, e.g. `/…_house_chores`) and paste it into the *clickAction* field. The value is saved.
+The Home Assistant documentation does not say which path opens an app panel. Open the **House Chores** panel, copy the path from the address bar (the part after the host, e.g. `/…_house_chores`) and paste it into the *clickAction* field. The value is saved.
 
 ### Data
 
@@ -33,7 +33,7 @@ DATA_DIR=./data PORT=8080 go run ./cmd/house-chores
 
 ### Co działa teraz (M0)
 
-- Panel **Obowiązki** otwiera się w menu bocznym Home Assistanta (także dla użytkowników bez uprawnień administratora).
+- Panel **House Chores** otwiera się w menu bocznym Home Assistanta (także dla użytkowników bez uprawnień administratora).
 - **Testowe powiadomienie:** wybierz usługę `notify.mobile_app_*` swojego telefonu i kliknij *Wyślij testowe powiadomienie*. Powiadomienie ma dwa przyciski: *Zrobione* i *Za godzinę*.
 - Kliknięcie przycisku widać w logu appki (zakładka *Log*) i w *Ostatnich zdarzeniach*. *Zrobione* dodatkowo usuwa powiadomienie z telefonu.
 - *Diagnostyka ingress* pokazuje, co Home Assistant przekazuje appce (ścieżka bazowa, zalogowany użytkownik).
@@ -42,7 +42,7 @@ Język interfejsu wynika z ustawień przeglądarki lub telefonu; można go zmien
 
 ### Ścieżka otwierana po tapnięciu w powiadomienie
 
-Dokumentacja Home Assistanta nie podaje, jaka ścieżka otwiera panel appki. Otwórz panel **Obowiązki**, skopiuj ścieżkę z paska adresu (część po nazwie hosta, np. `/…_house_chores`) i wklej w pole *clickAction*. Wartość zostanie zapamiętana.
+Dokumentacja Home Assistanta nie podaje, jaka ścieżka otwiera panel appki. Otwórz panel **House Chores**, skopiuj ścieżkę z paska adresu (część po nazwie hosta, np. `/…_house_chores`) i wklej w pole *clickAction*. Wartość zostanie zapamiętana.
 
 ### Dane
 

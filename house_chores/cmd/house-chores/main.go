@@ -1,4 +1,4 @@
-// Obowiązki (Chores) is a Home Assistant app for household chores.
+// House Chores is a Home Assistant app for household chores.
 package main
 
 import (

@@ -1,4 +1,4 @@
-# Obowiązki — household chores for Home Assistant
+# House Chores for Home Assistant
 
 🇬🇧 English · [🇵🇱 Polski](README.pl.md)
 
@@ -12,7 +12,7 @@ A Home Assistant app (formerly add-on) for sharing household chores. Reminders a
 - Reminders only inside a notification window (10:00–20:00 by default), repeated until someone marks the chore done.
 - Calendar and a comparison of who did what, with per-chore weights.
 - Export of a month for any LLM and import of suggested weights.
-- Polish and English UI.
+- Localized UI and notifications: English and Polish, following the phone or browser language. More languages can be added in one file (`house_chores/internal/i18n`).
 
 ## Installation
 
@@ -20,8 +20,8 @@ A Home Assistant app (formerly add-on) for sharing household chores. Reminders a
    ```
    https://github.com/Fryk/house-chores-ha
    ```
-2. Install **Obowiązki** and start it. The first start builds the image on your device, which takes a few minutes.
-3. Open the **Obowiązki** panel in the sidebar.
+2. Install **House Chores** and start it. The first start builds the image on your device, which takes a few minutes.
+3. Open the **House Chores** panel in the sidebar.
 
 Details: [house_chores/DOCS.md](house_chores/DOCS.md).
 

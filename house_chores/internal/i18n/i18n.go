@@ -78,7 +78,7 @@ func (l Lang) T(key string, args ...any) string {
 
 var catalog = map[Lang]map[string]string{
 	EN: {
-		"app.name":           "Chores",
+		"app.name":           "House Chores",
 		"mode":               "%s mode",
 		"nav.home":           "Home",
 		"nav.lang_other":     "Polski",
@@ -119,11 +119,11 @@ var catalog = map[Lang]map[string]string{
 		"dev.err_gone":       "This notification is no longer on the phone",
 		"dev.err_action":     "The notification has no such action",
 		"dev.err_not_ready":  "Event handling is not running yet",
-		"notif.title":        "Chores",
+		"notif.title":        "House Chores",
 		"notif.test_message": "Test notification #%d",
 		"notif.done":         "Done",
 		"notif.snooze":       "In 1 hour",
-		"notif.channel":      "Chores",
+		"notif.channel":      "House Chores",
 	},
 	PL: {
 		"app.name":           "Obowiązki",

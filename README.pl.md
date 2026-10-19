@@ -1,4 +1,4 @@
-# Obowiązki — domowe obowiązki w Home Assistant
+# House Chores — domowe obowiązki w Home Assistant
 
 [🇬🇧 English](README.md) · 🇵🇱 Polski
 
@@ -12,7 +12,7 @@ Appka Home Assistanta (dawniej add-on) do dzielenia się domowymi obowiązkami. 
 - Przypomnienia tylko w oknie powiadomień (domyślnie 10:00–20:00), ponawiane do odhaczenia.
 - Kalendarz i porównanie, kto co zrobił, z wagami zadań.
 - Eksport miesiąca dla dowolnego LLM i import proponowanych wag.
-- Interfejs po polsku i po angielsku.
+- Interfejs i powiadomienia po polsku i po angielsku, zgodnie z językiem telefonu lub przeglądarki. Kolejne języki dodaje się w jednym pliku (`house_chores/internal/i18n`).
 
 ## Instalacja
 
@@ -20,8 +20,8 @@ Appka Home Assistanta (dawniej add-on) do dzielenia się domowymi obowiązkami. 
    ```
    https://github.com/Fryk/house-chores-ha
    ```
-2. Zainstaluj **Obowiązki** i uruchom. Pierwsze uruchomienie buduje obraz na urządzeniu, co trwa kilka minut.
-3. Otwórz panel **Obowiązki** w menu bocznym.
+2. Zainstaluj **House Chores** i uruchom. Pierwsze uruchomienie buduje obraz na urządzeniu, co trwa kilka minut.
+3. Otwórz panel **House Chores** w menu bocznym. Nazwy panelu Home Assistant nie tłumaczy, ale interfejs w środku jest po polsku, jeśli telefon lub przeglądarka ma ustawiony polski.
 
 Szczegóły: [house_chores/DOCS.md](house_chores/DOCS.md).
 

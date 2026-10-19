@@ -1,4 +1,4 @@
-# Obowiązki — app (add-on) do Home Assistant
+# House Chores (Obowiązki) — app (add-on) do Home Assistant
 
 Specyfikacja dla Claude Code. Wersja 0.5, stan na 2026-10-11.
 
@@ -131,7 +131,7 @@ Zasady:
 - Kasowanie po odhaczeniu: `message: "clear_notification"` i `data.tag` z tym samym tagiem, do wszystkich odbiorców **[docs]**. Zastrzeżenie z docs: na Androidzie dla powiadomień, które nie są krytyczne, skasowanie może wymagać, żeby aplikacja była niedawno używana — kasowanie jest „best effort”, a stan prawdy trzyma baza.
 - Tapnięcie w treść otwiera appkę: `data.clickAction` (Android; `url` dla iOS) przyjmuje względny URL instancji HA, np. `/lovelace/test` **[docs]**. Dokumentacja nie podaje ścieżki panelu ingress appki — w M0 odczytać ją z paska adresu po otwarciu panelu „Obowiązki” i zapisać w spec (slug zawiera prefiks repozytorium, patrz `/addons/self/info`, dostępne bez `hassio_api`) **[docs: względny URL; ścieżka panelu do ustalenia w M0]**.
 - Dostarczanie na czas: `ttl: 0`, `priority: high` w `data` — bez tego Android potrafi nie zadzwonić, gdy telefon leży z wygaszonym ekranem (nie dotyczy lokalnego push) **[docs]**. Osobny `channel` „Obowiązki": kanał tworzy się przy pierwszym powiadomieniu z daną nazwą, potem użytkownik ustawia jego dźwięk w Androidzie (domyślnie `General`) **[docs]**. Właściwości kanału (`importance`, `vibrationPattern`, `ledColor`) są ustawiane tylko przy pierwszym użyciu kanału, później ignorowane (poza obniżeniem `importance`) — dlatego `importance: high` trzeba wysłać od pierwszego powiadomienia **[docs]**.
-- Powiadomienia informacyjne („ktoś zrobił") idą bez przycisków, z osobnym tagiem, na osobnym kanale „Obowiązki – info".
+- Powiadomienia informacyjne („ktoś zrobił") idą bez przycisków, z osobnym tagiem, na osobnym kanale „<kanał> – info” (nazwa kanału w języku osoby: „Obowiązki – info” / „House Chores – info”).
 
 Odbiór kliknięć: WebSocket `ws://supervisor/core/websocket`, uwierzytelnienie tokenem `SUPERVISOR_TOKEN` **[docs]**. Przebieg **[docs]**: serwer wysyła `{"type":"auth_required"}`, appka odpowiada `{"type":"auth","access_token":"<SUPERVISOR_TOKEN>"}`, serwer `auth_ok` (albo `auth_invalid` i rozłącza). Potem `{"id":N,"type":"subscribe_events","event_type":"mobile_app_notification_action"}` → `result` z `success: true`, a każde kliknięcie przychodzi jako `{"id":N,"type":"event","event":{"event_type":...,"data":{"action":...,"tag":...},"context":{"user_id":...}}}`. Kolejne komendy muszą mieć rosnące `id`. Zdarzenie niesie `action` oraz, na Androidzie, pola wysłane w powiadomieniu, m.in. `tag` **[docs]**. Wymagany auto-reconnect z backoffem; po reconnect appka odczytuje aktualne stany obserwowanych encji, żeby nie zgubić końca cyklu.
 
@@ -179,6 +179,8 @@ Uwagi:
 ## 8. UI
 
 Mobile-first, po polsku i po angielsku, otwierane w aplikacji HA przez ingress. Język: wybór z przełącznika (pamiętany w ciasteczku), inaczej `Accept-Language`, domyślnie angielski. Treść powiadomień w języku osoby (od M1 pole `person.language`; w M0 język strony, z której wysłano test). Nazwy w katalogu obowiązków (pkt 3) w obu językach.
+
+Lokalizacja **[docs]**: `name`, `description` i `panel_title` w `config.yaml` to pojedyncze napisy, których HA nie tłumaczy, więc są po angielsku („House Chores”). Pliki `house_chores/translations/{en,pl}.yaml` tłumaczą tylko opcje konfiguracji appki (klucze `configuration` i `network`) — dodać je razem z pierwszą opcją w `config.yaml`. Wszystkie teksty interfejsu i powiadomień idą przez katalog tłumaczeń (`internal/i18n`); nowy język = nowa sekcja w katalogu, test pilnuje kompletności kluczy.
 
 Repozytorium jest publiczne: README i dokumentacja appki po angielsku i po polsku, kod, komentarze i logi po angielsku, bez danych prywatnych i sekretów. Wszystkie URL-e względne; ścieżka bazowa z nagłówka `X-Ingress-Path` **[docs]**. Ingress przenosi HTTP/1.x, streaming i WebSockety **[docs]**. Rozpoznanie zalogowanego użytkownika HA z nagłówków, które Supervisor dodaje do każdego żądania ingress: `X-Remote-User-Id`, `X-Remote-User-Name`, `X-Remote-User-Display-Name` **[docs]**. Fallback (brak nagłówka albo użytkownik niepowiązany z osobą): wybór osoby zapamiętany w `localStorage`.
 
@@ -264,17 +266,17 @@ Stack (lekki): **Go**, jeden binarny plik; SQLite przez `modernc.org/sqlite` (be
 
 `config.yaml` (klucze potwierdzone **[docs]**):
 ```yaml
-name: "Obowiązki (House Chores)"
+name: "House Chores"
 version: "0.1.0"
 slug: house_chores
-description: "Household chores with reminders via the Home Assistant app / Domowe obowiązki z przypomnieniami"
+description: "Household chores with reminders via the Home Assistant Companion app"
 arch:
   - amd64
   - aarch64
 ingress: true
 ingress_port: 8099
 panel_icon: mdi:broom
-panel_title: "Obowiązki"
+panel_title: "House Chores"
 panel_admin: false        # domyślnie true = tylko admini widzą panel
 homeassistant_api: true   # dostęp do http://supervisor/core/api
 backup: cold              # zatrzymuje appkę na czas backupu, bezpieczne dla SQLite
@@ -334,7 +336,7 @@ Przyjęte domyślnie, łatwe do zmiany:
 
 ## 11. Kamienie milowe
 
-- **M0 — szkielet.** Układ repo z pkt 9.1, baza SQLite z migracjami (na razie `settings` i tymczasowy dziennik zdarzeń), appka działa w trybie fake ze stroną `/dev`, instaluje się w HA, panel „Obowiązki" otwiera się przez ingress w aplikacji HA na telefonie, przycisk wysyła testowe powiadomienie z akcją, a kliknięcie akcji jest widoczne w logu appki. Ten etap weryfikuje wszystkie punkty **[trening]** — po nim zaktualizuj spec.
+- **M0 — szkielet.** Układ repo z pkt 9.1, baza SQLite z migracjami (na razie `settings` i tymczasowy dziennik zdarzeń), appka działa w trybie fake ze stroną `/dev`, instaluje się w HA, panel „House Chores" otwiera się przez ingress w aplikacji HA na telefonie, przycisk wysyła testowe powiadomienie z akcją, a kliknięcie akcji jest widoczne w logu appki. Ten etap weryfikuje wszystkie punkty **[trening]** — po nim zaktualizuj spec.
 - **M1 — osoby, katalog i zadania bez terminu.** Ustawienia osób/telefonów/list, katalog startowy, ekran „Szybkie", oba przepływy z pkt 2.3 łącznie z kasowaniem powiadomień i powiadomieniem informacyjnym.
 - **M2 — zadania na dzień.** Powtarzalność, generowanie wystąpień, scheduler, ponawianie, snooze, zaległe.
 - **M3 — zadania tygodniowe.** Zbiorcze powiadomienie i harmonogram narastania.

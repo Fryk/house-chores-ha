@@ -1,4 +1,4 @@
-# Obowiązki
+# House Chores
 
 **EN:** Household chores with reminders sent through the Home Assistant Companion app. Status: early development (M0).
 
